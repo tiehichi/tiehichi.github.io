@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="utf-8">
+  
+
+  
+  <title>Linux串口开发 | Hexo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="一直以来在Linux下用到串口的时候都是用Python的pyserial库操作，现在发现直接使用Linux的系统调用操作串口还真是挺复杂的。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Linux串口开发">
+<meta property="og:url" content="http://yoursite.com/2017/11/16/linuxserialport/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="一直以来在Linux下用到串口的时候都是用Python的pyserial库操作，现在发现直接使用Linux的系统调用操作串口还真是挺复杂的。">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2019-01-03T12:11:18.439Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Linux串口开发">
+<meta name="twitter:description" content="一直以来在Linux下用到串口的时候都是用Python的pyserial库操作，现在发现直接使用Linux的系统调用操作串口还真是挺复杂的。">
+  
+    <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  
+    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+</html>
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Hexo</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://yoursite.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-linuxserialport" class="article article-type-post" itemscope="" itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2017/11/16/linuxserialport/" class="article-date">
+  <time datetime="2017-11-15T16:00:00.000Z" itemprop="datePublished">2017-11-16</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      Linux串口开发
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>一直以来在Linux下用到串口的时候都是用Python的pyserial库操作，现在发现直接使用Linux的系统调用操作串口还真是挺复杂的。<br><a id="more"></a></p>
+<p>得益于Linux一切皆文件的思想，串口的读写可以直接使用<code>read</code>、<code>write</code>系统调用操作<code>/dev</code>目录下的串口设备节点，串口开发复杂的地方在于串口属性的配置，十分繁琐。</p>
+<h3 id="串口设备属性配置"><a href="#串口设备属性配置" class="headerlink" title="串口设备属性配置"></a>串口设备属性配置</h3><p>一般来说，使用串口设备需要配置的属性有：波特率、数据位、停止位、校验位。Linux中，这些属性使用<code>struct termios</code>结构进行存储，该结构定义在<code>termios.h</code>头文件中，查看系统的<a href="https://linux.die.net/man/3/termios" target="_blank" rel="noopener">man手册</a>可以看到该结构的详细介绍。该结构至少包含以下属性：<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">termios</span></span></span><br><span class="line"><span class="class">&#123;</span>   </span><br><span class="line">    <span class="keyword">tcflag_t</span> c_iflag;      <span class="comment">/* input modes */</span></span><br><span class="line">    <span class="keyword">tcflag_t</span> c_oflag;      <span class="comment">/* output modes */</span></span><br><span class="line">    <span class="keyword">tcflag_t</span> c_cflag;      <span class="comment">/* control modes */</span></span><br><span class="line">    <span class="keyword">tcflag_t</span> c_lflag;      <span class="comment">/* local modes */</span></span><br><span class="line">    <span class="keyword">cc_t</span>     c_cc[NCCS];   <span class="comment">/* special characters */</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure></p>
+<p>使用<code>tcgetattr()</code>、<code>tcsetattr()</code>函数可以读取或设置串口设备的属性，函数原型见<a href="https://linux.die.net/man/3/termios" target="_blank" rel="noopener">man手册</a>。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">termios</span> <span class="title">portOption</span>;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// fd: 串口设备文件描述符，使用 open 函数创建</span></span><br><span class="line">tcgetattr(fd, &amp;portOption);     <span class="comment">// 读取串口设备属性，存入portOption中</span></span><br><span class="line">tcsetattr(fd, TCSANOW, &amp;portOption);    <span class="comment">// 设置设备属性， “TCSANOW”参数表示使属性立即生效</span></span><br></pre></td></tr></table></figure></p>
+<p><strong>波特率的设置</strong></p>
+<p>可以使用<code>cfsetispeed()</code>、<code>cfsetospeed()</code>分别设置串口的输入、输出波特率，使用<code>cfgetispeed()</code>、<code>cfgetospeed()</code>分别获取串口的输入、输出波特率。波特率的数据类型为<code>speed_t</code>，是一个枚举类型，其取值范围可以查看<a href="https://linux.die.net/man/3/termios" target="_blank" rel="noopener">man手册</a><br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">cfsetispeed(&amp;portOption,B115200);   <span class="comment">//设置为115200Bps</span></span><br><span class="line">cfsetospeed(&amp;portOption,B115200);</span><br></pre></td></tr></table></figure></p>
+<p>注意，该设置仅为修改<code>struct termios</code>结构的值，要让设置生效还需要使用<code>tcsetattr()</code>函数。</p>
+<p><strong>数据位设置</strong></p>
+<p>数据位长度可以设置为5、6、7、8，分别对应宏CS5、CS6、CS7、CS8，根据需要将对应的宏与<code>struct termios</code>结构中的<code>c_cflag</code>字段按位或即可，这种设置属性的方法很符合Unix风格。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">portOption.c_cflag |= CS7;  <span class="comment">// 7位数据位</span></span><br><span class="line">portOption.c_cflag |= CS8;  <span class="comment">// 8位数据位</span></span><br></pre></td></tr></table></figure></p>
+<p><strong>停止位设置</strong></p>
+<p><code>termios.h</code>中定义了一个宏<code>CSTOPB</code>来表示两位停止位，如果需要设置2位停止位，同数据位设置一样与<code>c_cflag</code>按位或即可。如果要设置1位停止位，则对CSTOPB取反再与<code>c_cflag</code>按位与。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">portOption.c_cflag |= CSTOPB;   <span class="comment">// 2位停止位</span></span><br><span class="line">portOption.c_cflag &amp;= ~CSTOPB;  <span class="comment">// 1位停止位</span></span><br></pre></td></tr></table></figure></p>
+<p><strong>校验位设置</strong></p>
+<p>涉及校验的宏定义有<code>INPCK</code>、<code>PARENB</code>、<code>PARODD</code>：</p>
+<ul>
+<li>INPCK：开启输入校验</li>
+<li>PARENB：开启输入输出时的校验码生成</li>
+<li>PARODD：设置奇校验<br>使用这三个宏，即可设置校验方式：<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* 无校验 */</span></span><br><span class="line">portOption.c_cflag &amp;= ~PARENB;</span><br><span class="line">portOption.c_cflag &amp;= ~INPCK;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 奇校验 */</span></span><br><span class="line">portOption.c_cflag |= PARENB;</span><br><span class="line">portOption.c_cflag |= PARODD;</span><br><span class="line">portOption.c_cflag |= INPCK;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 偶校验 */</span></span><br><span class="line">portOption.c_cflag |= PARENB;</span><br><span class="line">portOption.c_cflag &amp;= ~PARODD;</span><br><span class="line">portOption.c_cflag |= INPCK;</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<p>注意：如果不是开发串口终端，而仅仅使用串口传输数据，则数据需要使用RAW Mode进行传输：<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">portOption.c_lflag &amp;= ~(ICANON | ECHO | ECHOE | ISIG);  <span class="comment">/*Input*/</span></span><br><span class="line">portOption.c_oflag &amp;= ~OPOST;   <span class="comment">/*Output*/</span></span><br></pre></td></tr></table></figure></p>
+<p>也可以偷懒使用<code>termios.h</code>中提供的函数<code>cfmakeraw()</code><br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cfmakeraw(&amp;portOption);</span><br></pre></td></tr></table></figure></p>
+<h3 id="阻塞与非阻塞"><a href="#阻塞与非阻塞" class="headerlink" title="阻塞与非阻塞"></a>阻塞与非阻塞</h3><p>串口设备的读写阻塞与非阻塞不仅仅与设备节点被<code>open</code>的时候设置的参数有关，还与<code>struct termios</code>结构中<code>c_cc[VMIN]</code>和<code>c_cc[VTIME]</code>有关。</p>
+<p>参考<code>wiringPi</code>库和<code>pyserial</code>的实现，我发现大家再打开串口设备的时候都是将其设置为非阻塞，然后在设置完设备属性后再使用<code>fcntl()</code>将其设置为阻塞。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int</span> fd = open(<span class="string">"/dev/ttyS0"</span>, O_RDWR | O_NOCTTY | O_NONBLOCK | O_NDELAY);</span><br><span class="line">...</span><br><span class="line"><span class="comment">/* 设置属性... */</span></span><br><span class="line">...</span><br><span class="line">fcntl(fd, F_SETFL, <span class="number">0</span>);  <span class="comment">// 设置为阻塞模式</span></span><br></pre></td></tr></table></figure></p>
+<p>设置完文件描述符的属性，还需要根据<code>c_cc[VMIN]</code>和<code>c_cc[VTIME]</code>才能确定读写的时候是否为阻塞模式，这两项的组合如下：</p>
+<ul>
+<li><p>c_cc[VMIN]==0; c_cc[VTIME]==0;</p>
+<p>  非阻塞，<code>read</code>函数将立即返回实际读取的字节数，没有读取到则返回0</p>
+</li>
+<li><p>c_cc[VMIN]&gt;0; c_cc[VTIME]==0;</p>
+<p>  阻塞，串口缓冲区中至少有<code>c_cc[VMIN]</code>个字节可供读取时，<code>read</code>才会返回，<code>read</code>的返回值为<code>c_cc[VMIN]</code>与<code>read</code>的<code>len</code>参数中的较小者。</p>
+</li>
+<li><p>c_cc[VMIN]==0; c_cc[VTIME]&gt;0;</p>
+<p>  这种情况下，当调用<code>read</code>时，计时器开始计时，<code>c_cc[VTIME]</code>的单位为十分之一秒，如果计时超过<code>c_cc[VTIME]</code>设置的时间，<code>read</code>将会返回0，或者缓冲区中至少有一个字节可供读取，<code>read</code>正常返回，否则将会阻塞。</p>
+</li>
+<li><p>c_cc[VMIN]&gt;0; c_cc[VTIME]&gt;0;</p>
+<p>  该情况中从调用<code>read</code>并且缓冲区中至少有一个字节可用时，计时器开始计时，并且每次调用<code>read</code>且缓冲区中有数据可供读取时，计时器会重新计时，直到计时器超时或者<code>read</code>已经读到<code>len</code>个字节，<code>read</code>会返回实际读取的字节数。注意在该情况下，如果缓冲区中没有可供读取的数据，那么计时器不会启动，<code>read</code>将被一直阻塞。</p>
+</li>
+</ul>
+<h3 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h3><p>使用<code>c_cc[VMIN]</code>与<code>c_cc[VTIME]</code>可以灵活的按需设置串口读取的阻塞与非阻塞状态。非阻塞<code>read</code>直接设置<code>c_cc[VMIN]==0; c_cc[VTIME]==0;</code>即可；阻塞的设置相对比较复杂：</p>
+<ol>
+<li><p>如果需要保证每次<code>read</code>的字节数，可以设置<code>c_cc[VMIN]&gt;0; c_cc[VTIME]==0;</code>，但是需要注意，<code>c_cc[]</code>的数据类型<code>cc_t</code>实际上为<code>unsigned char</code>，其取值范围为<code>0~255</code></p>
+</li>
+<li><p>如果需要为<code>read</code>设置超时时间，需要注意后面两种情况的超时是不同的。<code>c_cc[VMIN]==0; c_cc[VTIME]&gt;0;</code>只能确保串口缓冲区中有数据可读，但是无法保证实际<code>read</code>到的字节数量；<code>c_cc[VMIN]&gt;0; c_cc[VTIME]&gt;0;</code>能够确保<code>read</code>到的字节数量，但是<code>read</code>每读取一个字节会重新设置计时器，即设置的超时时间并不是<code>read</code>超时返回的时间，并且需要注意，当缓冲区无数据可读时，计时器并不会启动，<code>read</code>将被一直阻塞。</p>
+</li>
+</ol>
+<p>从某种意义上来说，串口超时的设置都不是“真正的”超时，并非从<code>read</code>函数被调用到超时返回的真实时间。<code>pyserial</code>库中的<code>read</code>函数是可以设置其超时返回时间的，参考其源码发现可以使用<code>select()</code>来实现“真正的”超时。</p>
+<p>为了同时保证<code>read</code>读取的字节数和超时返回的时间，换一种思路就是使用<code>c_cc[VMIN]&gt;0; c_cc[VTIME]==0;</code>来保证<code>read</code>读取的字节数，使用<code>select()</code>函数来设置超时：<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">fd_set <span class="built_in">set</span>;</span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">timeval</span> <span class="title">timeout</span>;</span></span><br><span class="line"></span><br><span class="line">timeout.tv_sec = <span class="number">5</span>;     <span class="comment">// 设置超时时间为5s</span></span><br><span class="line">FD_ZERO(&amp;<span class="built_in">set</span>);</span><br><span class="line">FD_SET(fd, &amp;<span class="built_in">set</span>);</span><br><span class="line"></span><br><span class="line">portOption.c_cc[VMIN] = <span class="number">255</span>;</span><br><span class="line">portOption.c_cc[VTIME] = <span class="number">0</span>;</span><br><span class="line">tcsetattr(fd, TCSANOW, &amp;portOption);</span><br><span class="line"></span><br><span class="line"><span class="keyword">switch</span>(select(fd+<span class="number">1</span>, &amp;<span class="built_in">set</span>, <span class="literal">NULL</span>, <span class="literal">NULL</span>, &amp;timeout))</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">case</span> <span class="number">0</span>:</span><br><span class="line">        <span class="comment">/* timeout */</span></span><br><span class="line">    <span class="keyword">case</span> <span class="number">-1</span>:</span><br><span class="line">        <span class="comment">/* select() error */</span></span><br><span class="line">    <span class="keyword">default</span>:</span><br><span class="line">        read(fd, buffer, len);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>关于<code>select()</code>函数的使用方法可以参考<a href="https://linux.die.net/man/3/select" target="_blank" rel="noopener">man手册</a></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://yoursite.com/2017/11/16/linuxserialport/" data-id="cjqgkwjjc0003nvuunff2tntx" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2018/04/04/about_rpi/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          树莓派上的骚操作
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2017/09/19/systemd_service_unit/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">Systemd Service 单元文件的编写</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">April 2018</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">November 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/07/">July 2017</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2018/04/04/about_rpi/">树莓派上的骚操作</a>
+          </li>
+        
+          <li>
+            <a href="/2017/11/16/linuxserialport/">Linux串口开发</a>
+          </li>
+        
+          <li>
+            <a href="/2017/09/19/systemd_service_unit/">Systemd Service 单元文件的编写</a>
+          </li>
+        
+          <li>
+            <a href="/2017/09/18/nfc_1/">在树莓派上使用 PN532 NFC读卡器[1]——Mifare Classic 1K 协议解析</a>
+          </li>
+        
+          <li>
+            <a href="/2017/08/14/flash_myphone/">记一次失败的刷机经历</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2019 John Doe<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+  <script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
+<script src="/js/script.js"></script>
+
+
+
+  </div>
+</body>
+</html>
