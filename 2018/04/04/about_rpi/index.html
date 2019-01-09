@@ -7,4 +7,13 @@
 <h3 id="3-5MM音频输出电流声"><a href="#3-5MM音频输出电流声" class="headerlink" title="3.5MM音频输出电流声"></a>3.5MM音频输出电流声</h3><p>网上很多人都提过树莓派的音频输出电流声过大的问题，有人说电路设计有问题解决不了，有人说换电流稳定的电源，有人说换USB声卡，居然还有人说大力出奇迹使劲把接头往里按的……其实解决方法很简单，在<code>/boot/config.txt</code>中添加<code>audio_pwm_mode=2</code>，重启，完事。</p>
 <h3 id="备份镜像过大"><a href="#备份镜像过大" class="headerlink" title="备份镜像过大"></a>备份镜像过大</h3><p>在Linux上使用<code>dd</code>把SD卡备份出来的镜像文件，跟SD卡容量大小相等，你用张32G的卡，备份出来的镜像就是32G。那么有没有一种方法能把镜像缩小呢？当然有！<a href="https://github.com/Drewsif/PiShrink" target="_blank" rel="noopener">PiShrink</a>脚本能够快速的重排镜像中的<code>inode</code>节点，缩减未使用的部分。</p>
 <h3 id="更换软件源"><a href="#更换软件源" class="headerlink" title="更换软件源"></a>更换软件源</h3><p><code>Raspbian</code>上不是只有一个<code>apt</code>源，还有一个<code>archive.raspberrypi.org</code>源，文件位置在<code>/etc/apt/sources.list.d/raspi.list</code>，科大和清华都有对应的国内源，找出来把原本的替换掉即可。例如USTC源的<a href="http://mirrors.ustc.edu.cn/help/archive.raspberrypi.org.html" target="_blank" rel="noopener">使用帮助</a></p>
-</div></article></div></main><footer><div class="paginator"><a href="/2017/11/16/linuxserialport/" class="next">下一篇</a></div><div class="copyright"><p>© 2017 - 2019 <a href="http://yoursite.com">Tiehichi</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> and <a href="https://github.com/pinggod/hexo-theme-apollo" target="_blank">hexo-theme-apollo</a>.</p></div></footer></div><script async src="//cdn.bootcss.com/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML" integrity="sha384-crwIf/BuaWM9rM65iM+dWFldgQ1Un8jWZMuh3puxb8TOY9+linwLoI7ZHZT+aekW" crossorigin="anonymous"></script></body></html>
+</div></article></div></main><footer><div class="paginator"><a href="/2017/11/16/linuxserialport/" class="next">NEXT</a></div><div id="container"></div><link rel="stylesheet" href="https://imsun.github.io/gitment/style/default.css"><script src="https://imsun.github.io/gitment/dist/gitment.browser.js"></script><script>var gitment = new Gitment({
+    id: 'Wed Apr 04 2018 00:00:00 GMT+0800',
+    owner: 'tiehichi',
+    repo: 'tiehichi.github.io',
+    oauth: {
+        client_id: '66ea91814a4bca56e723',
+        client_secret: 'eb3613422683939fc5aced7aa62a33ec56019014',
+    },
+})
+gitment.render('container')</script><div class="copyright"><p>© 2017 - 2019 <a href="http://yoursite.com">Tiehichi</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> and <a href="https://github.com/pinggod/hexo-theme-apollo" target="_blank">hexo-theme-apollo</a>.</p></div></footer></div><script async src="//cdn.bootcss.com/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML" integrity="sha384-crwIf/BuaWM9rM65iM+dWFldgQ1Un8jWZMuh3puxb8TOY9+linwLoI7ZHZT+aekW" crossorigin="anonymous"></script></body></html>
