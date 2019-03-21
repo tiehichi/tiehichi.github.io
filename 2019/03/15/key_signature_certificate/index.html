@@ -1,0 +1,31 @@
+<!DOCTYPE html><html><head><meta name="generator" content="Hexo 3.8.0"><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><title> 公钥私钥、签名和证书 · Tiehichi</title><meta name="description" content="安全"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" href="/favicon.png"><link rel="stylesheet" href="/css/apollo.css"><link rel="search" type="application/opensearchdescription+xml" href="http://yoursite.com/atom.xml" title="Tiehichi"></head><body><div class="wrap"><header><a href="/" class="logo-link"><img src="/favicon.png" alt="logo"></a><ul class="nav nav-list"><li class="nav-list-item"><a href="/" target="_self" class="nav-list-link">BLOG</a></li><li class="nav-list-item"><a href="/archives/" target="_self" class="nav-list-link">ARCHIVE</a></li><li class="nav-list-item"><a href="https://github.com/tiehichi" target="_blank" class="nav-list-link">GITHUB</a></li><li class="nav-list-item"><a href="mailto://daibingzhi9519@outlook.com" target="_self" class="nav-list-link">EMAIL</a></li><li class="nav-list-item"><a href="https://steamcommunity.com/profiles/76561198138342339/" target="_blank" class="nav-list-link">STEAM</a></li><li class="nav-list-item"><a href="https://www.gog.com/u/%E4%B9%8C%E9%B8%A6%E5%A4%A7%E4%BA%BA" target="_blank" class="nav-list-link">GOG</a></li></ul></header><main class="container"><div class="post"><article class="post-block"><h1 class="post-title">公钥私钥、签名和证书</h1><div class="post-info">Mar 15, 2019</div><div class="post-content"><p>工作需要，研究了一下安全相关理论知识和名词<br><a id="more"></a></p>
+<h3 id="非对称加密中的公钥和私钥"><a href="#非对称加密中的公钥和私钥" class="headerlink" title="非对称加密中的公钥和私钥"></a>非对称加密中的公钥和私钥</h3><p>在加解密的过程中，加密密钥和解密密钥不同的加密方式，就是<code>非对称加密</code>。例如：</p>
+<p><img src="https://i.loli.net/2019/03/15/5c8b3d197c943.png" alt=""></p>
+<p>在上图中，加密密钥和解密密钥是不同的，并且两个密钥成对出现，替换掉任意一个密钥，这个加解密过程就不成立，这就是一种非对称加密的形式。</p>
+<p>在非对称加密过程中，由于密钥是成对的，两个密钥公开其中一个，只要保存好另一个密钥，这个过程仍然是安全的，这个被公开的密钥就被称为<code>公钥</code>，自己保留的密钥就是<code>私钥</code>。因为非对称加密的这种特性，该加密过程可用于安全通信、文件校验等场景。</p>
+<p>需要注意的是，理论上非对称加密中的两个密钥，使用任意一个做公钥都是可以的，但在RSA算法中，私钥和公钥生成的规范不同，二者并不能互换角色。</p>
+<h3 id="签名"><a href="#签名" class="headerlink" title="签名"></a>签名</h3><p>在非对称加密的基础上，考虑如下场景：</p>
+<p>现有A和B两个人，A在自己的电脑上生成了一对密钥，并把公钥发给了B</p>
+<p><img src="https://i.loli.net/2019/03/15/5c8b3da9d372a.png" alt=""></p>
+<p>A准备向B发送一个文件，为了确保这个文件在发送过程中不被篡改，并且让B能够确定是A发出的，A采用了这样的方式：将文件先计算哈希和，得到一个文件摘要，然后使用私钥对这个文件摘要进行加密，生成了<code>数字签名</code>，然后把这个签名和文件一起发送给B。</p>
+<p><img src="https://i.loli.net/2019/03/15/5c8b3de6cda1c.png" alt=""></p>
+<p>这样B收到文件后，对<code>数字签名</code>部分使用公钥进行解密，解密成功说明该文件是由A发出的；再对文件部分计算哈希和，并跟解密之后的摘要进行对比，如果哈希和与摘要相同，说明文件未被篡改过。</p>
+<h3 id="证书"><a href="#证书" class="headerlink" title="证书"></a>证书</h3><p>在上面的场景中，如果出现了一个黑客C，C自己生成了一对密钥，然后在A将公钥发给B的过程中截获了公钥A，并替换成自己的公钥C</p>
+<p><img src="https://i.loli.net/2019/03/15/5c8b3e3722d60.png" alt=""></p>
+<p>但B并不知道此事，B仍然以为自己接收的是公钥A；此时C向B发送一个经过签名的恶意文件，B虽然能够完成对该文件的验证，但是B仍以为该文件是A发出的。</p>
+<p>为了解决这种情况，需要一个可信的第三方机构D，并同时引入证书的概念。D生成一对密钥，并把自己的个人信息和公钥打包成一个文件交给B，B相信D，所以把这个文件存了下来，这个文件就是<code>CA证书</code>。</p>
+<p>A把自己的公钥和个人信息也打包成一个文件，交给D进行认证。D在确认这个文件中的公钥跟信息一致（均属于A）的时候，就使用自己的私钥对这个文件进行签名，这样这个文件就是一个<code>经过认证的数字证书</code>。</p>
+<p><img src="https://i.loli.net/2019/03/15/5c8b3e7aae5c8.png" alt=""></p>
+<p>当B需要和A通信时，D会把证书A使用自己的私钥D进行签名，并附带上自己的机构信息，然后将这个文件发送给B。</p>
+<p><img src="https://i.loli.net/2019/03/15/5c8b3ea103494.png" alt=""></p>
+<p>B拿到包含公钥A的证书后，使用CA证书中包含的公钥D进行验证，确认可信后拿到公钥A，然后就可以跟A安全的通信了。</p>
+</div></article></div></main><footer><div class="paginator"><a href="/2018/04/04/about_rpi/" class="next">NEXT</a></div><div id="container"></div><link rel="stylesheet" href="https://jjeejj.github.io/css/gitment.css"><script src="https://jjeejj.github.io/js/gitment.js"></script><script>var gitment = new Gitment({
+    id: 'Fri Mar 15 2019 00:00:00 GMT+0800',
+    owner: 'tiehichi',
+    repo: 'tiehichi.github.io',
+    oauth: {
+        client_id: '66ea91814a4bca56e723',
+        client_secret: 'eb3613422683939fc5aced7aa62a33ec56019014',
+    },
+})
+gitment.render('container')</script><div class="copyright"><p>© 2017 - 2019 <a href="http://yoursite.com">Tiehichi</a>, powered by <a href="https://hexo.io/" target="_blank">Hexo</a> and <a href="https://github.com/pinggod/hexo-theme-apollo" target="_blank">hexo-theme-apollo</a>.</p></div></footer></div><script async src="//cdn.bootcss.com/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML" integrity="sha384-crwIf/BuaWM9rM65iM+dWFldgQ1Un8jWZMuh3puxb8TOY9+linwLoI7ZHZT+aekW" crossorigin="anonymous"></script></body></html>
