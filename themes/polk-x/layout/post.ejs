@@ -29,11 +29,11 @@
 
 <!-- 评论插件 -->
 <% if (theme.gitment.client_id && theme.gitment.client_secret && theme.gitment.enable ){ %>
-    <div id="gitment_container"></div>
-    <link rel="stylesheet" href="https://imsun.github.io/gitment/style/default.css">
-    <script src="https://imsun.github.io/gitment/dist/gitment.browser.js"></script>
+    <div id="gitalk-container"></div>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+    <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
     <script>
-    var gitment = new Gitment({
+    var gitalk = new Gitalk({
         id: '<%= page.title %>',
         owner: '<%= theme.gitment.owner %>',
         repo: '<%= theme.gitment.repo %>',
@@ -42,7 +42,7 @@
             client_secret: '<%= theme.gitment.client_secret %>',
         },
     })
-    gitment.render('gitment_container')
+    gitalk.render('gitalk-container')
     </script>
 <% } %>
 
