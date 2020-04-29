@@ -1,4 +1,13 @@
 <%- partial('_partial/header') %>
+<% 
+hexo.extend.generator.register('archive', function(locals){
+  return {
+    path: 'archives/index.html',
+    data: locals.posts,
+    layout: ['years']
+  }
+});
+%>
 <section class="archive">
   <h1 class="header"></h1>
   <ul class="post-archive">
