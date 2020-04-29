@@ -1,6 +1,8 @@
 ---
 title: 减小Docker镜像的体积
 date: 2019-10-13
+categories: 
+- docker
 ---
 # 减小Docker镜像的体积
 在构建用于`高通sectools`签名工具的`Docker`镜像时，发现一个问题：我基于`alpine 3.2`构建的镜像，居然比同事基于`ubuntu 16.04`构建的镜像体积更大，感觉没什么道理

@@ -1,6 +1,8 @@
 ---
 title: kobject分析
 date: 2020-03-09
+categories:
+- kernel research
 ---
 
 # kobject分析
