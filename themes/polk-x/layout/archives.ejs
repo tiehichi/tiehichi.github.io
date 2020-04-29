@@ -1,0 +1,24 @@
+<%- partial('_partial/header') %>
+<section class="archive">
+  <h1 class="header"></h1>
+  <ul class="post-archive">
+    <% 
+    var years = {};
+    site.posts.sort('date').reverse().forEach(function(post){
+        var year = post.date.year()
+        if(years[year]===undefined){
+            years[year] = [];
+        }
+        years[year].push(post);
+    });
+    %>
+    <% Object.keys(years).reverse().forEach(function(year){  %>
+      <li class="post-item">
+        
+        <a class="post-title" href="<%- config.root %><%- year.path %>"><%= year.name %></a>
+      </li>
+    <% }) %>
+  </ul>
+</section>
+<%- partial('_partial/paginator') %>
+<%- partial('_partial/footer') %>

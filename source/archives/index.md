@@ -1,6 +1,6 @@
 ---
 title: Archives
-layout: archive
+layout: archives
 date:
 type: "archives"
 ---
