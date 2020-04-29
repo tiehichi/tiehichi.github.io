@@ -15,6 +15,6 @@ menu:
   Home: /
   #  Summary: /summary
   Categories: /categories
-  Archives: /archives
+  #Archives: /archives
   About: /about
   RSS: /atom.xml
