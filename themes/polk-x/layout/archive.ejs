@@ -2,7 +2,7 @@
 <section class="archive">
   <h1 class="header"></h1>
   <ul class="post-archive">
-    <% site.archives.sort('name').each(function(item){ %>
+    <% site.archives.each(function(item){ %>
       <% if(item.posts.length){ %>
       <li class="post-item">
         <a class="post-title" href="<%- config.root %><%- item.path %>"><%= item.name %> <sup>[<%= item.posts.length %>]</sup></a>
