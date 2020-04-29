@@ -2,12 +2,13 @@
 <section class="archive">
   <h1 class="header"></h1>
   <ul class="post-archive">
-    <% page.posts.each(function (post) { %>
+    <% site.archives.sort('name').each(function(item){ %>
+      <% if(item.posts.length){ %>
       <li class="post-item">
-        <time class="post-date"><%= date(post.date, "YYYY-MM-DD") %></time>
-        <a class="post-title" href="<%- url_for(post.path) %>"><%= post.title %></a>
+        <a class="post-title" href="<%- config.root %><%- item.path %>"><%= item.name %> <sup>[<%= item.posts.length %>]</sup></a>
       </li>
-    <% }) %>
+      <% } %>
+      <% }); %>
   </ul>
 </section>
 <%- partial('_partial/paginator') %>
