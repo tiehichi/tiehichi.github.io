@@ -1,4 +1,5 @@
 ---
 title: Archives
-layout: archives_year
+layout: years
+type: "archives"
 ---
