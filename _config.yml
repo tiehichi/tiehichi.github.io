@@ -115,5 +115,7 @@ deploy:
   branch: master
 
 archive_generator:
+  enabled: true
   per_page: 0
   yearly: true
+  order_by: -date
