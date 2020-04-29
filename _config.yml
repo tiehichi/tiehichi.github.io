@@ -114,3 +114,6 @@ deploy:
   repo: https://gh_token@github.com/tiehichi/tiehichi.github.io.git
   branch: master
 
+archive_generator:
+  per_page: 0
+  yearly: true
