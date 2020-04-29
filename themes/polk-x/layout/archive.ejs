@@ -2,10 +2,20 @@
 <section class="archive">
   <h1 class="header"></h1>
   <ul class="post-archive">
-    <% site.archives.each(function(item){ %>
-      <% if(item.posts.length){ %>
+    <% 
+    var years = {};
+    site.posts.sort('date').reverse().forEach(function(post){
+        var year = post.date.year()
+        if(years[year]===undefined){
+            years[year] = [];
+        }
+        years[year].push(post);
+    });
+    %>
+    <% Object.keys(years).reverse().forEach(function(year){  %>
+      <% if(year.posts.length){ %>
       <li class="post-item">
-        <a class="post-title" href="<%- config.root %><%- item.path %>"><%= item.name %> <sup>[<%= item.posts.length %>]</sup></a>
+        <a class="post-title" href="<%- config.root %><%- year.path %>"><%= year.name %></a>
       </li>
       <% } %>
       <% }); %>
