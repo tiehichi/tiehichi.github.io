@@ -1,3 +1,10 @@
+---
+title: CLONE_FS标志对子进程文件系统的影响
+date: 2020-06-18
+categories:
+- kernel research
+---
+
 # CLONE_FS标志对子进程文件系统的影响
 
 ## 争论
