@@ -1,6 +1,8 @@
 ---
 title: cmocka单元测试框架
 date: 2019-11-07
+categories: 
+- 单元测试
 ---
 # `cmocka`单元测试框架
 

@@ -2,6 +2,8 @@
 title: 记一次失败的刷机经历
 date: 2017-08-14
 desc: Sony Z5P, lineage OS
+categories: 
+- 生活
 ---
 无意间在网上看到了有sony z5p的非官方版的Lineage OS了，准备刷一下试试看，在XDA上看到卡刷需要使用Lineage定制的TWRP刷入，于是从网上找了个TWRP的img镜像准备刷进去，结果......
 <!--more-->

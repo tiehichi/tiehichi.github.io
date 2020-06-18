@@ -2,6 +2,8 @@
 title: 为树莓派编译Qt5.8(Embedded)
 date: 2017-07-09
 desc: raspberry pi qt5.8 qtvirtualkeyboard 虚拟键盘
+categories: 
+- 树莓派
 ---
 
 为了在树莓派上使用Qt提供的虚拟键盘，最开始我将虚拟键盘的源码下载到树莓派上，使用Raspbian软件源中的Qt5库进行编译，结果运行时发现弹出虚拟键盘时，屏幕上除了虚拟键盘以外的区域均为黑色，无法正常显示其他窗口，猜测可能是虚拟键盘在X Window上显示有问题。为了解决这个诡异的问题，我决定为树莓派编译Qt5.8，交叉编译完的Qt显示时将绕过X Window，直接走FrameBuffer将图形显示在屏幕上，这样应该可以解决虚拟键盘在X Window上显示的问题。
