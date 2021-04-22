@@ -264,6 +264,6 @@ static void kobj_kset_join(struct kobject *kobj)
 
 该函数将kobject添加到了kset指针域的尾部，这样就可以通过kset找到组内的所有kobject，kset与组内的kobject组成了下图所示的结构：
 
-![](https://i.loli.net/2020/03/09/JveD9WLUmVBsIHl.png)
+![](https://cdn.nlark.com/yuque/0/2021/png/1679957/1619073283151-8ae6f326-5004-4b30-ba99-1f9215174d29.png)
 
 这里需要注意kobject_init()和kobject_add()都没有设置kobject->kset的值，需要手动设置kobject所属的kset。
