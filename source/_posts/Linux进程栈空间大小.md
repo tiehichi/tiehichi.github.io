@@ -218,7 +218,7 @@ Size:                132 kB
 
 仔细观察会发现，任意进程在启动后，其栈空间大小基本都是`132kB`；在分析原因之前，我们先来看一下进程的虚拟地址空间分布：
 
-![进程虚拟地址空间-进程虚拟地址空间.png](https://cdn.nlark.com/yuque/0/2021/png/1679957/1619073769696-a162481e-6c27-4cab-a313-2b3229285ccd.png)
+![进程虚拟地址空间-进程虚拟地址空间.png](https://i.loli.net/2020/10/22/6aXcUltKxpCVRMn.png)
 
 进程的虚拟地址空间大小为`4GB`，其中内核空间`1GB`，用户空间`3GB`，在`arm32`平台上，二者之间存在一个大小为`16M`的空隙；用户空间的准确大小为`TASK_SIZE`：
 
@@ -305,7 +305,7 @@ static int __bprm_mm_init(struct linux_binprm *bprm)
 
 此时，进程的栈空间如下图所示：
 
-![进程虚拟地址空间-bprm_mm_init.png](https://cdn.nlark.com/yuque/0/2021/png/1679957/1619073695987-abd6cd30-9cd7-4f21-a9cb-25e66030609f.png)
+![进程虚拟地址空间-bprm_mm_init.png](https://i.loli.net/2020/10/22/CpolijRAa62IYkS.png)
 
 继续回到`do_execve_common()`函数，到目前为止，内核还没有识别到可执行文件的格式，也没有解析可执行文件中各个段的数据；在`exec_binprm()`中，会遍历在内核中注册支持的可执行文件格式，并调用该格式的`load_binary`方法来处理对应格式的二进制文件：
 
@@ -385,7 +385,7 @@ int setup_arg_pages(struct linux_binprm *bprm,
 
 前面我们已经初始化了一个页的栈空间，用来存放二进制文件名、参数和环境变量等；在`setup_arg_pages()`中，我们把前面这一个页的栈空间移动到`stack_top`的位置；在调用函数时，`stack_top`的值是`randomize_stack_top(STACK_TOP)`，即一个随机地址，这里是为了安全性而实现的栈地址随机化；函数通过`shift_arg_pages()`将页移动到新的地址，移动后的栈如下图所示：
 
-![进程虚拟地址空间-shift_arg_pages.png](https://cdn.nlark.com/yuque/0/2021/png/1679957/1619073715280-ba9fe2c7-e41a-44ac-a0de-2a875d118e36.png)
+![进程虚拟地址空间-shift_arg_pages.png](https://i.loli.net/2020/10/22/TVGHRBohlwfxM6Y.png)
 
 接着回到`setup_arg_pages()`函数，关注如下代码：
 
@@ -402,7 +402,7 @@ ret = expand_stack(vma, stack_base);
 
 `expand_stack()`函数用来扩展栈虚拟地址空间的大小，`stack_base`是新的栈基地址，这里的`stack_expand`是一个固定值，大小为`128k`，即此处将栈空间扩展`128k`的大小，扩展后栈空间如下：
 
-![进程虚拟地址空间-expand_stack.png](https://cdn.nlark.com/yuque/0/2021/png/1679957/1619073769672-7b6e92c2-f096-446d-8b61-b11c2d141d8b.png)
+![进程虚拟地址空间-expand_stack.png](https://i.loli.net/2020/10/22/vidmz6Yo9J7BGjX.png)
 
 所以扩展后的栈虚拟地址空间为`4kB+128kB`，刚刚好`132kB`.
 
