@@ -520,5 +520,6 @@ static int copy_mm(unsigned long clone_flags, struct task_struct *tsk)
     }
     ...
 }
+```
 
 在`copy_mm`中，检查了`clone_flags`，如果设置了`CLONE_VM`，那么将当前`task_struct->mm`指针赋值给新的`task_struct->mm`；所以我们可以得到结论，通过`pthread`库创建的线程，其内存是与主线程共享的。
