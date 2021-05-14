@@ -5,7 +5,6 @@ categories:
 - kernel research
 ---
 
-# kobject分析
 
 根据文章[The zen of kobjects](https://lwn.net/Articles/51437/)所述，kobject设计之初是为了管理内核对象的引用计数，但在内核的发展过程中，添加了更多的功能；对于较新版本的内核，我理解的kobject的功能主要是：
 

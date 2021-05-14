@@ -5,7 +5,6 @@ categories:
 - kernel research
 ---
 
-# dm-verity使能
 
 根据[内核文档](https://www.kernel.org/doc/html/latest/admin-guide/device-mapper/verity.html#example)，用户空间可以通过 `veritysetup` 命令创建块设备的哈希树，创建 `mapped device` 并启用 `dm-verity` 功能，我们来从内核的角度分析一下该命令如何创建激活 `mapped device` 并启用 `dm-verity` 功能。
 

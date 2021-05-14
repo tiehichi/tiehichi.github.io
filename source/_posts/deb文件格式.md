@@ -2,7 +2,7 @@
 title: deb文件格式
 date: 2020-01-22
 ---
-# deb文件格式
+
 
 deb软件包实际上是`archive file`，可以使用`ar`命令进行打包和解包
 

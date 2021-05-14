@@ -2,7 +2,7 @@
 title: cgroup的简单使用
 date: 2019-12-18
 ---
-# `cgroup`的简单使用
+
 
 `cgroup（control group）`是由`linux`内核提供的功能，可以对一组进程使用的资源进行监控、管理和限制。
 

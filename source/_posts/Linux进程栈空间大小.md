@@ -5,7 +5,6 @@ categories:
 - kernel research
 ---
 
-# Linux进程栈空间大小
 
 分析过程基于`Linux kernel 3.18.120`
 

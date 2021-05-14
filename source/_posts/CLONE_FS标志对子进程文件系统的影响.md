@@ -5,7 +5,6 @@ categories:
 - kernel research
 ---
 
-# CLONE_FS标志对子进程文件系统的影响
 
 ## 争论
 

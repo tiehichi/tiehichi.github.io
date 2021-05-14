@@ -6,15 +6,12 @@
 
 加油
 
-### Find Me
+## Find Me
 
-- [Github]( https://github.com/tiehichi )
-- [Steam]( https://steamcommunity.com/profiles/76561198138342339 )
+- [Github](https://github.com/tiehichi)
+- [Steam](https://steamcommunity.com/profiles/76561198138342339)
 - [GOG](https://www.gog.com/u/乌鸦大人)
 
-### Contact Me
+## Contact Me
 
 - [Email](mailto://tiehichi@outlook.com)
-
-  
-

@@ -4,12 +4,14 @@ date: 2019-10-13
 categories: 
 - docker
 ---
-# 减小Docker镜像的体积
+
 在构建用于`高通sectools`签名工具的`Docker`镜像时，发现一个问题：我基于`alpine 3.2`构建的镜像，居然比同事基于`ubuntu 16.04`构建的镜像体积更大，感觉没什么道理
+
 ```bash
 secboot			dev			fcb2114cfdb8		13 seconds ago		241MB        # 我的
 ubuntu			secboot		4e637fb3bcc5		19 hours ago		186MB        # 同事的
 ```
+
 `Dockerfile`长这样
 
 ```dockerfile
@@ -53,6 +55,7 @@ RUN apk del .build-deps
 WORKDIR /root
 CMD ["/bin/bash"]
 ```
+
 ## 分析
 
 为了找出镜像过大的原因，我开始一段一段的`build`，测试镜像的大小，终于在最后一个`RUN`的位置发现了问题
@@ -62,13 +65,17 @@ CMD ["/bin/bash"]
 secboot		dev		53016ef2a6c6        34 minutes ago      240MB        # apk del之前
 secboot		dev		fcb2114cfdb8        35 minutes ago      241MB        # apk del之后
 ```
+
 我确认上面的注释不是我写错了，而是确实`apk del`之后镜像比之前还大了`1M`；仔细思考之后，我觉得应该是镜像分层造成的最终镜像过大。
 
 查询之后发现有个命令可以查看`Docker`镜像的分层情况
+
 ```bash
 docker history <repository>:<tag>
 ```
+
 查看`secboot:dev`镜像的分层结果如下
+
 ```bash
 IMAGE			CREATED			CREATED BY                                      SIZE
 0362b4c01d3d	4 seconds ago	/bin/sh -c #(nop)  CMD ["/bin/bash"]            0B
@@ -113,7 +120,7 @@ RUN apk add --no-cache --virtual .build-deps \
     cd /root && rm -rf mtd-utils && \
     pip install python-lzo \
     && \
-	apk del .build-deps
+    apk del .build-deps
 ```
 
 再次`build`查看分层情况
