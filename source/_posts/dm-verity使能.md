@@ -31,19 +31,20 @@ categories:
  */
 
 static struct target_type verity_target = {
-	.name		= "verity",
-	.version	= {1, 4, 0},
-	.module		= THIS_MODULE,
-	...
+    .name       = "verity",
+    .version    = {1, 4, 0},
+    .module     = THIS_MODULE,
+    ...
 };
 
 static int __init dm_verity_init(void)
 {
-	...
-	r = dm_register_target(&verity_target);
-	...
+    ...
+    r = dm_register_target(&verity_target);
+    ...
 }
 ```
+
 ```c
 /*
  * file: drivers/md/dm-target.c
@@ -53,12 +54,12 @@ static LIST_HEAD(_targets);
 
 int dm_register_target(struct target_type *tt)
 {
-	...
-	if (__find_target_type(tt->name))
-		rv = -EEXIST;
-	else
-		list_add(&tt->list, &_targets);
-	...
+    ...
+    if (__find_target_type(tt->name))
+        rv = -EEXIST;
+    else
+        list_add(&tt->list, &_targets);
+    ...
 }
 ```
 
@@ -78,6 +79,7 @@ veritysetup create <device name> <data device> <hashtree device> <root hash>
 这条命令其实包括了两个过程，创建 `mapped device` 设备和处理 `mapped device` 与 `data device` `hashtree device` 之间的关系。这两个过程均为使用 `ioctl` 向 `/dev/mapper/control` 发送命令来实现的。
 
 ## device mapper控制节点
+
 `/dev/mapper/control` 在内核中的描述如下：
 
 ```c
@@ -86,18 +88,18 @@ veritysetup create <device name> <data device> <hashtree device> <root hash>
  */
 
 static const struct file_operations _ctl_fops = {
-	.open = nonseekable_open,
-	.unlocked_ioctl	 = dm_ctl_ioctl,
-	.compat_ioctl = dm_compat_ctl_ioctl,
-	.owner	 = THIS_MODULE,
-	.llseek  = noop_llseek,
+    .open = nonseekable_open,
+    .unlocked_ioctl  = dm_ctl_ioctl,
+    .compat_ioctl = dm_compat_ctl_ioctl,
+    .owner   = THIS_MODULE,
+    .llseek  = noop_llseek,
 };
 
 static struct miscdevice _dm_misc = {
-	.minor		= MAPPER_CTRL_MINOR,
-	.name  		= DM_NAME,
-	.nodename	= DM_DIR "/" DM_CONTROL_NODE,
-	.fops  		= &_ctl_fops
+    .minor      = MAPPER_CTRL_MINOR,
+    .name       = DM_NAME,
+    .nodename   = DM_DIR "/" DM_CONTROL_NODE,
+    .fops       = &_ctl_fops
 };
 ```
 
@@ -106,41 +108,43 @@ static struct miscdevice _dm_misc = {
 ```c
 static ioctl_fn lookup_ioctl(unsigned int cmd, int *ioctl_flags)
 {
-	static struct {
-		int cmd;
-		int flags;
-		ioctl_fn fn;
-	} _ioctls[] = {
-		{DM_VERSION_CMD, 0, NULL}, /* version is dealt with elsewhere */
-		...
-		{DM_DEV_CREATE_CMD, IOCTL_FLAGS_NO_PARAMS, dev_create},
+    static struct {
+        int cmd;
+        int flags;
+        ioctl_fn fn;
+    } _ioctls[] = {
+        {DM_VERSION_CMD, 0, NULL}, /* version is dealt with elsewhere */
         ...
-		{DM_TABLE_LOAD_CMD, 0, table_load},
-		...
-	};
+        {DM_DEV_CREATE_CMD, IOCTL_FLAGS_NO_PARAMS, dev_create},
+        ...
+        {DM_TABLE_LOAD_CMD, 0, table_load},
+        ...
+    };
 
-	if (unlikely(cmd >= ARRAY_SIZE(_ioctls)))
-		return NULL;
+    if (unlikely(cmd >= ARRAY_SIZE(_ioctls)))
+        return NULL;
 
-	*ioctl_flags = _ioctls[cmd].flags;
-	return _ioctls[cmd].fn;
+    *ioctl_flags = _ioctls[cmd].flags;
+    return _ioctls[cmd].fn;
 }
 ```
 
 `veritysetup` 使能 `dm-verity` 的核心，是通过 `ioctl` 发送这两个命令： `DM_DEV_CREATE_CMD` 和 `DM_TABLE_LOAD_CMD` 。 `DM_DEV_CREATE_CMD` 就是创建 `mapped-device` ，我们把重点放在 `DM_TABLE_LOAD_CMD` 上。
+
 ## DM_TABLE_LOAD_CMD
+
 我们顺着 `DM_TABLE_LOAD_CMD` 命令对应的函数 `table_load` 往下看：
 
 ```c
 static int table_load(struct dm_ioctl *param, size_t param_size)
 {
-	...
-	md = find_device(param);
-	...
-	r = dm_table_create(&t, get_mode(param), param->target_count, md);
-	...
-	r = populate_table(t, param, param_size);
-	...
+    ...
+    md = find_device(param);
+    ...
+    r = dm_table_create(&t, get_mode(param), param->target_count, md);
+    ...
+    r = populate_table(t, param, param_size);
+    ...
 }
 ```
 
@@ -148,19 +152,19 @@ static int table_load(struct dm_ioctl *param, size_t param_size)
 
 ```c
 static int populate_table(struct dm_table *table,
-			  struct dm_ioctl *param, size_t param_size)
+                struct dm_ioctl *param, size_t param_size)
 {
-	...
-	for (i = 0; i < param->target_count; i++) {
-		r = next_target(spec, next, end, &spec, &target_params);
-		...
-		r = dm_table_add_target(table, spec->target_type,
-					(sector_t) spec->sector_start,
-					(sector_t) spec->length,
-					target_params);
-		...
-		next = spec->next;
-	}
+    ...
+    for (i = 0; i < param->target_count; i++) {
+        r = next_target(spec, next, end, &spec, &target_params);
+        ...
+        r = dm_table_add_target(table, spec->target_type,
+                    (sector_t) spec->sector_start,
+                    (sector_t) spec->length,
+                    target_params);
+        ...
+        next = spec->next;
+    }
     ...
 }
 ```
@@ -170,13 +174,13 @@ static int populate_table(struct dm_table *table,
 
 ```c
 int dm_table_add_target(struct dm_table *t, const char *type,
-			sector_t start, sector_t len, char *params)
+            sector_t start, sector_t len, char *params)
 {
-	...
-	tgt->type = dm_get_target_type(type);
-	...
-	r = tgt->type->ctr(tgt, argc, argv);
-	...
+    ...
+    ->type = dm_get_target_type(type);
+    ...
+    r = tgt->type->ctr(tgt, argc, argv);
+    ...
 }
 ```
 
@@ -186,11 +190,11 @@ int dm_table_add_target(struct dm_table *t, const char *type,
 ```c
 int verity_ctr(struct dm_target *ti, unsigned argc, char **argv)
 {
-	...
-	r = dm_get_device(ti, argv[1], FMODE_READ, &v->data_dev);
-	...
-	r = dm_get_device(ti, argv[2], FMODE_READ, &v->hash_dev);
-	...
+    ...
+    r = dm_get_device(ti, argv[1], FMODE_READ, &v->data_dev);
+    ...
+    r = dm_get_device(ti, argv[2], FMODE_READ, &v->hash_dev);
+    ...
 }
 ```
 
@@ -200,12 +204,13 @@ int verity_ctr(struct dm_target *ti, unsigned argc, char **argv)
 int verity_map(struct dm_target *ti, struct bio *bio)
 {
     ...
-	bio->bi_bdev = v->data_dev->bdev;
-	bio->bi_iter.bi_sector = verity_map_sector(v, bio->bi_iter.bi_sector);
-	...
+    bio->bi_bdev = v->data_dev->bdev;
+    bio->bi_iter.bi_sector = verity_map_sector(v, bio->bi_iter.bi_sector);
+    ...
 
-	bio->bi_end_io = verity_end_io;
-	...
+    bio->bi_end_io = verity_end_io;
+    ...
+}
 ```
 
 `verity_end_io` 则是将校验的过程加入到 `work_queue` 中，这样每次对块设备的访问，都会触发 `dm-verity` 校验机制。
