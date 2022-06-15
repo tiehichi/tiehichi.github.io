@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+  
+  <title>树莓派上的骚操作 - Tiehichi&#39;s Blog</title>
+  <link rel="icon" href="https://imgur.com/pPCZVX8.png" type="image/x-icon">
+  <link href="https://fonts.googleapis.com/css?family=Bungee+Inline|Noto+Sans+SC|Ubuntu+Mono&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  
+  <meta name="keywords" content=>
+  
+  
+  
+    <link rel="alternate" href="/atom.xml " title="Tiehichi&#39;s Blog" type="application/atom+xml">
+  
+
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+
+  <body>
+    <div class="container">
+      <header class="header">
+  <div class="blog-title">
+    <a href="/" class="logo">Tiehichi&#39;s Blog</a>
+    <div class="subtitle"></div>
+  </div>
+  <nav class="navbar">
+    <ul class="menu">
+      
+        <li class="menu-item">
+          <a href="/" class="menu-item-link">Home</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/categories" class="menu-item-link">Categories</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/about" class="menu-item-link">About</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/atom.xml" class="menu-item-link">RSS</a>
+        </li>
+      
+    </ul>
+  </nav>
+</header>
+<script>
+  var link="";
+  var a = document.getElementsByTagName('img');
+  for(i=0;i<a.length;i++){
+    a[i].referrerPolicy='no-referrer';
+    link = a[i].src;
+    a[i].src = link+'?t='+Math.random();
+  }
+</script>
+
+<article class="post">
+  <div class="post-title">
+    <h1 class="article-title">树莓派上的骚操作</h1>
+  </div>
+
+  <!-- 文章目录 -->
+  <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#串口问题"><span class="toc-text">串口问题</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#远程连接"><span class="toc-text">远程连接</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#IP地址"><span class="toc-text">IP地址</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-5MM音频输出电流声"><span class="toc-text">3.5MM音频输出电流声</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#备份镜像过大"><span class="toc-text">备份镜像过大</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#更换软件源"><span class="toc-text">更换软件源</span></a></li></ol>
+
+  <div class="post-content">
+    <p>树莓派是个好东西，简单易用价格不贵，就是上面的坑还真不少，本文记录一下在使用树莓派2/3的过程中踩过的坑</p>
+<a id="more"></a>
+
+<h3 id="串口问题"><a href="#串口问题" class="headerlink" title="串口问题"></a>串口问题</h3><p>树莓派3上蓝牙使用硬件串口，软件串口<code>ttyS0</code>的速率不稳定基本无法正常使用。为了能够使用硬件串口设备<code>ttyAMA0</code>即<code>GPIO 14 15</code>脚，需要禁用蓝牙设备，关闭串口shell并打开硬件串口。</p>
+<p>向<code>/boot/config.txt</code>文件中添加<code>dtoverlay=pi3-disable-bt</code>将禁用蓝牙设备，具体可见<code>/boot/overlays</code>文件夹中的<code>README</code>文件。然后使用<code>raspi-config</code>关闭串口shell并且打开硬件串口，重启后即可使用<code>ttyAMA0</code>串口设备。</p>
+<h3 id="远程连接"><a href="#远程连接" class="headerlink" title="远程连接"></a>远程连接</h3><p>刚装完系统的树莓派，没有显示屏没有串口线，默认没有打开<code>ssh</code>和<code>vnc</code>服务，怎么远程连接上去呢？直接在SD卡的<code>boot</code>分区中创建一个名为<code>ssh</code>的空文件，再启动树莓派的时候<code>ssh</code>服务就被启动了。</p>
+<p>需要注意的是，如果使用这种方法启动了ssh服务，就不要再去<code>raspi-config</code>中启动ssh服务了，否则树莓派上回启动两个<code>ssh</code>服务，远程连接上去使用任何命令都会被两个<code>ssh</code>服务同时执行，也就是任何命令都会被执行两次。</p>
+<h3 id="IP地址"><a href="#IP地址" class="headerlink" title="IP地址"></a>IP地址</h3><p>没有路由器密码没有屏幕怎么查看树莓派ip地址呢？这里强烈安利我的小脚本<a href="https://github.com/StarAndRabbit/LAN-Scanner" target="_blank" rel="noopener">LAN-Scanner</a>，简单粗暴显示局域网内的活动IP和MAC和OUI信息。</p>
+<h3 id="3-5MM音频输出电流声"><a href="#3-5MM音频输出电流声" class="headerlink" title="3.5MM音频输出电流声"></a>3.5MM音频输出电流声</h3><p>网上很多人都提过树莓派的音频输出电流声过大的问题，有人说电路设计有问题解决不了，有人说换电流稳定的电源，有人说换USB声卡，居然还有人说大力出奇迹使劲把接头往里按的……其实解决方法很简单，在<code>/boot/config.txt</code>中添加<code>audio_pwm_mode=2</code>，重启，完事。</p>
+<h3 id="备份镜像过大"><a href="#备份镜像过大" class="headerlink" title="备份镜像过大"></a>备份镜像过大</h3><p>在Linux上使用<code>dd</code>把SD卡备份出来的镜像文件，跟SD卡容量大小相等，你用张32G的卡，备份出来的镜像就是32G。那么有没有一种方法能把镜像缩小呢？当然有！<a href="https://github.com/Drewsif/PiShrink" target="_blank" rel="noopener">PiShrink</a>脚本能够快速的重排镜像中的<code>inode</code>节点，缩减未使用的部分。</p>
+<h3 id="更换软件源"><a href="#更换软件源" class="headerlink" title="更换软件源"></a>更换软件源</h3><p><code>Raspbian</code>上不是只有一个<code>apt</code>源，还有一个<code>archive.raspberrypi.org</code>源，文件位置在<code>/etc/apt/sources.list.d/raspi.list</code>，科大和清华都有对应的国内源，找出来把原本的替换掉即可。例如USTC源的<a href="http://mirrors.ustc.edu.cn/help/archive.raspberrypi.org.html" target="_blank" rel="noopener">使用帮助</a></p>
+
+  </div>
+  <div class="post-meta">
+    <span class="post-time" style="color:#646060;font-size:13px">2018-04-04</span>
+  </div>
+
+  <div class="post-footer">
+    
+
+    <a href="#top" class="top">Back to Top</a>
+  </div>
+</article>
+
+<!-- 评论插件 -->
+
+    <div id="gitalk-container"></div>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+    <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+    <script>
+    var gitalk = new Gitalk({
+        id: '树莓派上的骚操作',
+        owner: 'tiehichi',
+        admin: ['tiehichi'],
+        repo: 'tiehichi.github.io',
+        clientID: 'bf2f550864240e94ca3f',
+        clientSecret: 'a03922278132bc805aa4a44d72e5250166095dbe',
+    })
+    gitalk.render('gitalk-container')
+    </script>
+
+
+<!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "8076240da6a9474eb806a2772561d84a"}'></script><!-- End Cloudflare Web Analytics -->
+<footer>
+  2022
+  <span class="author">
+    Tiehichi
+  </span>
+</footer>
+
+
+    </div>
+  </body>
+</html>

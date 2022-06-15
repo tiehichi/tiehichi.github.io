@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+  
+  <title>dm-verity使能 - Tiehichi&#39;s Blog</title>
+  <link rel="icon" href="https://imgur.com/pPCZVX8.png" type="image/x-icon">
+  <link href="https://fonts.googleapis.com/css?family=Bungee+Inline|Noto+Sans+SC|Ubuntu+Mono&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  
+  <meta name="keywords" content=>
+  
+  
+  
+    <link rel="alternate" href="/atom.xml " title="Tiehichi&#39;s Blog" type="application/atom+xml">
+  
+
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+
+  <body>
+    <div class="container">
+      <header class="header">
+  <div class="blog-title">
+    <a href="/" class="logo">Tiehichi&#39;s Blog</a>
+    <div class="subtitle"></div>
+  </div>
+  <nav class="navbar">
+    <ul class="menu">
+      
+        <li class="menu-item">
+          <a href="/" class="menu-item-link">Home</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/categories" class="menu-item-link">Categories</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/about" class="menu-item-link">About</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/atom.xml" class="menu-item-link">RSS</a>
+        </li>
+      
+    </ul>
+  </nav>
+</header>
+<script>
+  var link="";
+  var a = document.getElementsByTagName('img');
+  for(i=0;i<a.length;i++){
+    a[i].referrerPolicy='no-referrer';
+    link = a[i].src;
+    a[i].src = link+'?t='+Math.random();
+  }
+</script>
+
+<article class="post">
+  <div class="post-title">
+    <h1 class="article-title">dm-verity使能</h1>
+  </div>
+
+  <!-- 文章目录 -->
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#device-mapper驱动结构"><span class="toc-text">device mapper驱动结构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#dm-verity模块初始化"><span class="toc-text">dm-verity模块初始化</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#veritysetup的参数"><span class="toc-text">veritysetup的参数</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#device-mapper控制节点"><span class="toc-text">device mapper控制节点</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DM-TABLE-LOAD-CMD"><span class="toc-text">DM_TABLE_LOAD_CMD</span></a></li></ol>
+
+  <div class="post-content">
+    <p>根据<a href="https://www.kernel.org/doc/html/latest/admin-guide/device-mapper/verity.html#example" target="_blank" rel="noopener">内核文档</a>，用户空间可以通过 <code>veritysetup</code> 命令创建块设备的哈希树，创建 <code>mapped device</code> 并启用 <code>dm-verity</code> 功能，我们来从内核的角度分析一下该命令如何创建激活 <code>mapped device</code> 并启用 <code>dm-verity</code> 功能。</p>
+<h2 id="device-mapper驱动结构"><a href="#device-mapper驱动结构" class="headerlink" title="device mapper驱动结构"></a>device mapper驱动结构</h2><p><img src="https://cdn.nlark.com/yuque/0/2021/jpeg/1679957/1620971139058-94938b70-2252-41dc-9919-0b2baf482e48.jpeg#height=576&id=LbJNA&name=image.jpeg&originHeight=631&originWidth=593&originalType=binary&size=54650&status=done&style=none&width=541" alt="image.jpeg"></p>
+<p>上图展示了 <code>device mapper</code> 的结构，即一个 <code>mapped device</code> 拥有一个 <code>mapping table</code> ，这个表负责维护 <code>mapped device</code> 与 <code>target device</code> 之间的映射关系，这些 <code>target</code> 既可以是物理设备，也可以是另一个 <code>mapped device</code> 。<br>内核使用下图中的几个结构体来描述这种映射关系：</p>
+<p><img src="https://cdn.nlark.com/yuque/0/2021/jpeg/1679957/1620972275115-b1afc057-14ec-4c70-9edf-1ba76861b428.jpeg#height=683&id=pgOrG&name=image.jpeg&originHeight=683&originWidth=721&originalType=binary&size=156516&status=done&style=none&width=721" alt="image.jpeg"></p>
+<p><code>mapped_device</code> 描述设备， <code>dm_table</code> 记录 <code>md</code> 设备下面有多少个 <code>target</code> ， <code>dm_target</code> 与 <code>target_type</code> 共同描述了 <code>target</code> 的驱动， <code>targe_type</code> 则是存放操作 <code>target</code> 设备的方法。我们的 <code>dm-verity</code> 功能，就是其中一种 <code>target_type</code> 。</p>
+<h2 id="dm-verity模块初始化"><a href="#dm-verity模块初始化" class="headerlink" title="dm-verity模块初始化"></a>dm-verity模块初始化</h2><p>内核中的 <code>dm-verity</code> 功能实现在内核源码树 <code>drivers/md/dm-verity-target.c</code> 中。<br>前面说到 <code>dm-verity</code> 功能是作为 <code>target_type</code> 来实现的，内核中的 <code>target_type</code> 使用链表进行管理，使用时通过 <code>target_type.name</code> 进行索引； <code>dm-verity</code> 模块初始化的过程就是将其对应的 <code>target_type</code> 结构体注册到链表上：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * file: drivers/md/dm-verity-target.c</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">target_type</span> <span class="title">verity_target</span> = &#123;</span></span><br><span class="line">    .name       = <span class="string">"verity"</span>,</span><br><span class="line">    .version    = &#123;<span class="number">1</span>, <span class="number">4</span>, <span class="number">0</span>&#125;,</span><br><span class="line">    .<span class="keyword">module</span>     = THIS_MODULE,</span><br><span class="line">    ...</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">int</span> __<span class="function">init <span class="title">dm_verity_init</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    r = dm_register_target(&amp;verity_target);</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * file: drivers/md/dm-target.c</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="title">LIST_HEAD</span><span class="params">(_targets)</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">dm_register_target</span><span class="params">(struct target_type *tt)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">if</span> (__find_target_type(tt-&gt;name))</span><br><span class="line">        rv = -EEXIST;</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">        list_add(&amp;tt-&gt;<span class="built_in">list</span>, &amp;_targets);</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="veritysetup的参数"><a href="#veritysetup的参数" class="headerlink" title="veritysetup的参数"></a>veritysetup的参数</h2><p><code>veritysetup</code> 激活 <code>dm-verity</code> 功能需要提供：</p>
+<ul>
+<li><code>mapped device</code> 设备名</li>
+<li>数据来源设备节点</li>
+<li>哈希树设备节点</li>
+<li>根哈希</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">veritysetup create &lt;device name&gt; &lt;data device&gt; &lt;hashtree device&gt; &lt;root <span class="built_in">hash</span>&gt;</span><br></pre></td></tr></table></figure>
+
+<p>这条命令其实包括了两个过程，创建 <code>mapped device</code> 设备和处理 <code>mapped device</code> 与 <code>data device</code> <code>hashtree device</code> 之间的关系。这两个过程均为使用 <code>ioctl</code> 向 <code>/dev/mapper/control</code> 发送命令来实现的。</p>
+<h2 id="device-mapper控制节点"><a href="#device-mapper控制节点" class="headerlink" title="device mapper控制节点"></a>device mapper控制节点</h2><p><code>/dev/mapper/control</code> 在内核中的描述如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * file: drivers/md/dm-ioctl.c</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">const</span> <span class="class"><span class="keyword">struct</span> <span class="title">file_operations</span> _<span class="title">ctl_fops</span> = &#123;</span></span><br><span class="line">    .<span class="built_in">open</span> = nonseekable_open,</span><br><span class="line">    .unlocked_ioctl  = dm_ctl_ioctl,</span><br><span class="line">    .compat_ioctl = dm_compat_ctl_ioctl,</span><br><span class="line">    .owner   = THIS_MODULE,</span><br><span class="line">    .llseek  = noop_llseek,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">miscdevice</span> _<span class="title">dm_misc</span> = &#123;</span></span><br><span class="line">    .minor      = MAPPER_CTRL_MINOR,</span><br><span class="line">    .name       = DM_NAME,</span><br><span class="line">    .nodename   = DM_DIR <span class="string">"/"</span> DM_CONTROL_NODE,</span><br><span class="line">    .fops       = &amp;_ctl_fops</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>通过 <code>ioctl</code> 对其进行访问，内核中的函数调用路径为： <code>dm_ctl_ioctl -&gt; ctl_ioctl -&gt; lookup_ioctl</code> 。 <code>lookup_ioctl</code> 再根据用户发送的命令，来返回不同的函数指针：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> ioctl_fn <span class="title">lookup_ioctl</span><span class="params">(<span class="keyword">unsigned</span> <span class="keyword">int</span> cmd, <span class="keyword">int</span> *ioctl_flags)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">static</span> <span class="class"><span class="keyword">struct</span> &#123;</span></span><br><span class="line">        <span class="keyword">int</span> cmd;</span><br><span class="line">        <span class="keyword">int</span> flags;</span><br><span class="line">        ioctl_fn fn;</span><br><span class="line">    &#125; _ioctls[] = &#123;</span><br><span class="line">        &#123;DM_VERSION_CMD, <span class="number">0</span>, <span class="literal">NULL</span>&#125;, <span class="comment">/* version is dealt with elsewhere */</span></span><br><span class="line">        ...</span><br><span class="line">        &#123;DM_DEV_CREATE_CMD, IOCTL_FLAGS_NO_PARAMS, dev_create&#125;,</span><br><span class="line">        ...</span><br><span class="line">        &#123;DM_TABLE_LOAD_CMD, <span class="number">0</span>, table_load&#125;,</span><br><span class="line">        ...</span><br><span class="line">    &#125;;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (unlikely(cmd &gt;= ARRAY_SIZE(_ioctls)))</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">NULL</span>;</span><br><span class="line"></span><br><span class="line">    *ioctl_flags = _ioctls[cmd].flags;</span><br><span class="line">    <span class="keyword">return</span> _ioctls[cmd].fn;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>veritysetup</code> 使能 <code>dm-verity</code> 的核心，是通过 <code>ioctl</code> 发送这两个命令： <code>DM_DEV_CREATE_CMD</code> 和 <code>DM_TABLE_LOAD_CMD</code> 。 <code>DM_DEV_CREATE_CMD</code> 就是创建 <code>mapped-device</code> ，我们把重点放在 <code>DM_TABLE_LOAD_CMD</code> 上。</p>
+<h2 id="DM-TABLE-LOAD-CMD"><a href="#DM-TABLE-LOAD-CMD" class="headerlink" title="DM_TABLE_LOAD_CMD"></a>DM_TABLE_LOAD_CMD</h2><p>我们顺着 <code>DM_TABLE_LOAD_CMD</code> 命令对应的函数 <code>table_load</code> 往下看：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> <span class="title">table_load</span><span class="params">(struct dm_ioctl *param, <span class="keyword">size_t</span> param_size)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    md = find_device(param);</span><br><span class="line">    ...</span><br><span class="line">    r = dm_table_create(&amp;t, get_mode(param), param-&gt;target_count, md);</span><br><span class="line">    ...</span><br><span class="line">    r = populate_table(t, param, param_size);</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>函数的实现比较长，我们只关注上面这三行：首先根据参数，找到对应的 <code>md</code> 设备，然后创建 <code>dm_table</code> 并将其与 <code>md</code> 设备关联，然后将参数继续传递给 <code>populate_table</code> 函数进行处理。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> <span class="title">populate_table</span><span class="params">(struct dm_table *table,</span></span></span><br><span class="line"><span class="function"><span class="params">                struct dm_ioctl *param, <span class="keyword">size_t</span> param_size)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; param-&gt;target_count; i++) &#123;</span><br><span class="line">        r = next_target(spec, next, <span class="built_in">end</span>, &amp;spec, &amp;target_params);</span><br><span class="line">        ...</span><br><span class="line">        r = dm_table_add_target(table, spec-&gt;target_type,</span><br><span class="line">                    (<span class="keyword">sector_t</span>) spec-&gt;sector_start,</span><br><span class="line">                    (<span class="keyword">sector_t</span>) spec-&gt;length,</span><br><span class="line">                    target_params);</span><br><span class="line">        ...</span><br><span class="line">        next = spec-&gt;next;</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>该函数根据 <code>param</code> 参数中的 <code>target_count</code> ，通过 <code>dm_table_add_target</code> 函数向 <code>dm_table</code> 添加 <code>target</code> ；此处我们要添加的 <code>target</code> 就是 <code>dm-verity-target</code> 。<br>继续看 <code>dm_table_add_target</code> 的实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">dm_table_add_target</span><span class="params">(struct dm_table *t, <span class="keyword">const</span> <span class="keyword">char</span> *type,</span></span></span><br><span class="line"><span class="function"><span class="params">            <span class="keyword">sector_t</span> start, <span class="keyword">sector_t</span> len, <span class="keyword">char</span> *params)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    -&gt;type = dm_get_target_type(type);</span><br><span class="line">    ...</span><br><span class="line">    r = tgt-&gt;type-&gt;ctr(tgt, argc, argv);</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>dm_get_target_type</code> 通过 <code>type</code> 来找到对应的 <code>target_type</code> 结构体，此处的 <code>type</code> 实际上就是 <code>target_type.name</code> ，我们要找到 <code>verity_target</code> ，所以此处传入的 <code>type</code> 为 <code>&quot;verity&quot;</code>。<br>找到 <code>target_type</code> 后，调用对应的 <code>ctr</code> 函数；对应到 <code>dm-verity</code> 中就是函数 <code>verity_ctr</code>：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">verity_ctr</span><span class="params">(struct dm_target *ti, <span class="keyword">unsigned</span> argc, <span class="keyword">char</span> **argv)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    r = dm_get_device(ti, argv[<span class="number">1</span>], FMODE_READ, &amp;v-&gt;data_dev);</span><br><span class="line">    ...</span><br><span class="line">    r = dm_get_device(ti, argv[<span class="number">2</span>], FMODE_READ, &amp;v-&gt;hash_dev);</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>verity_ctr</code> 才是真正的对 <code>dm-verity</code> 功能进行初始化，包括设置 <code>data device</code> ， <code>hash device</code> 等信息，创建 <code>dm_verity</code> 结构体实例；这些操作完成之后，针对前面创建的 <code>md</code> 设备的 <code>dm-verity</code> 功能已经使能，之后对其进行的读写操作，会调用到 <code>verity_target</code> 的 <code>map</code> 函数—— <code>verity_map</code> ，该函数负责处理IO之前的映射关系，设置 <code>bio_end_io</code> 函数指针，即 <code>block io</code> 的完成方法：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">verity_map</span><span class="params">(struct dm_target *ti, struct bio *bio)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    bio-&gt;bi_bdev = v-&gt;data_dev-&gt;bdev;</span><br><span class="line">    bio-&gt;bi_iter.bi_sector = verity_map_sector(v, bio-&gt;bi_iter.bi_sector);</span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">    bio-&gt;bi_end_io = verity_end_io;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>verity_end_io</code> 则是将校验的过程加入到 <code>work_queue</code> 中，这样每次对块设备的访问，都会触发 <code>dm-verity</code> 校验机制。</p>
+
+  </div>
+  <div class="post-meta">
+    <span class="post-time" style="color:#646060;font-size:13px">2021-05-14</span>
+  </div>
+
+  <div class="post-footer">
+    
+
+    <a href="#top" class="top">Back to Top</a>
+  </div>
+</article>
+
+<!-- 评论插件 -->
+
+    <div id="gitalk-container"></div>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+    <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+    <script>
+    var gitalk = new Gitalk({
+        id: 'dm-verity使能',
+        owner: 'tiehichi',
+        admin: ['tiehichi'],
+        repo: 'tiehichi.github.io',
+        clientID: 'bf2f550864240e94ca3f',
+        clientSecret: 'a03922278132bc805aa4a44d72e5250166095dbe',
+    })
+    gitalk.render('gitalk-container')
+    </script>
+
+
+<!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "8076240da6a9474eb806a2772561d84a"}'></script><!-- End Cloudflare Web Analytics -->
+<footer>
+  2022
+  <span class="author">
+    Tiehichi
+  </span>
+</footer>
+
+
+    </div>
+  </body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+  
+  <title>记一次失败的刷机经历 - Tiehichi&#39;s Blog</title>
+  <link rel="icon" href="https://imgur.com/pPCZVX8.png" type="image/x-icon">
+  <link href="https://fonts.googleapis.com/css?family=Bungee+Inline|Noto+Sans+SC|Ubuntu+Mono&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  
+  <meta name="keywords" content=>
+  
+  
+  
+    <link rel="alternate" href="/atom.xml " title="Tiehichi&#39;s Blog" type="application/atom+xml">
+  
+
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+
+  <body>
+    <div class="container">
+      <header class="header">
+  <div class="blog-title">
+    <a href="/" class="logo">Tiehichi&#39;s Blog</a>
+    <div class="subtitle"></div>
+  </div>
+  <nav class="navbar">
+    <ul class="menu">
+      
+        <li class="menu-item">
+          <a href="/" class="menu-item-link">Home</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/categories" class="menu-item-link">Categories</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/about" class="menu-item-link">About</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/atom.xml" class="menu-item-link">RSS</a>
+        </li>
+      
+    </ul>
+  </nav>
+</header>
+<script>
+  var link="";
+  var a = document.getElementsByTagName('img');
+  for(i=0;i<a.length;i++){
+    a[i].referrerPolicy='no-referrer';
+    link = a[i].src;
+    a[i].src = link+'?t='+Math.random();
+  }
+</script>
+
+<article class="post">
+  <div class="post-title">
+    <h1 class="article-title">记一次失败的刷机经历</h1>
+  </div>
+
+  <!-- 文章目录 -->
+  
+
+  <div class="post-content">
+    <p>无意间在网上看到了有sony z5p的非官方版的Lineage OS了，准备刷一下试试看，在XDA上看到卡刷需要使用Lineage定制的TWRP刷入，于是从网上找了个TWRP的img镜像准备刷进去，结果……</p>
+<a id="more"></a>
+<p>想了一下，img文件嘛，用flashtool刷不是很方便嘛，打开flashtool，手机进到fastboot，选择img文件，刷入kernel，完美。重启开机，嗯？怎么进到TWRP了，我要进系统啊，难道是刚刷入TWRP要进行什么设置？不管了，瞎**设置一通，重启……卧槽又进TWRP了！这时我意识到</p>
+<p><img src="https://i.loli.net/2019/01/05/5c30776ec4dfe.png" alt="not-simple.png"></p>
+<p>想了一下，感觉流程没什么问题啊，此时机智的我想起来看一下flashtool的日志。发现问题了！我在flashtool的日志上看到<code>写入boot分区成功</code>，这boot分区按理来说应该是存放kernel镜像的，系统启动的时候会从boot分区加载内核镜像，我现在把recovery写进了boot分区，那开机必然会直接进入recovery……</p>
+<p>搞清楚了问题的原因，那解决方法就很明朗了，再搞个内核重新刷呗。既然已经决定要刷机了，干脆直接把系统刷成<code>Lineage OS</code>，经过一番搜索，在<a href="https://forum.xda-developers.com/z5-premium/development/lineageos-14-1-z5p-e6853-t3576995" target="_blank" rel="noopener">XDA</a>上看到非官方版的<code>Lineage OS</code>已经提供了<code>fastboot</code>刷机所需要的各种镜像文件，全部下载下来，开搞。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">fastboot -S 256M flash boot boot.img</span><br><span class="line">fastboot -S 256M flash system system.img</span><br><span class="line">fastboot -S 256M flash userdata userdata.img</span><br><span class="line">fastboot -S 256M flash cache cache.img</span><br></pre></td></tr></table></figure>
+<p>刷完这些东西应该能进系统了，不过还是顺便把TWRP刷一下，这次不会出问题了！</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">fastboot flash recovery lineage_twrp_recovery.img</span><br></pre></td></tr></table></figure>
+<p>拔下数据线，开机成功！</p>
+<p>总结：瞎**操作之前要先动脑子。</p>
+
+  </div>
+  <div class="post-meta">
+    <span class="post-time" style="color:#646060;font-size:13px">2017-08-14</span>
+  </div>
+
+  <div class="post-footer">
+    
+
+    <a href="#top" class="top">Back to Top</a>
+  </div>
+</article>
+
+<!-- 评论插件 -->
+
+    <div id="gitalk-container"></div>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+    <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+    <script>
+    var gitalk = new Gitalk({
+        id: '记一次失败的刷机经历',
+        owner: 'tiehichi',
+        admin: ['tiehichi'],
+        repo: 'tiehichi.github.io',
+        clientID: 'bf2f550864240e94ca3f',
+        clientSecret: 'a03922278132bc805aa4a44d72e5250166095dbe',
+    })
+    gitalk.render('gitalk-container')
+    </script>
+
+
+<!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "8076240da6a9474eb806a2772561d84a"}'></script><!-- End Cloudflare Web Analytics -->
+<footer>
+  2022
+  <span class="author">
+    Tiehichi
+  </span>
+</footer>
+
+
+    </div>
+  </body>
+</html>

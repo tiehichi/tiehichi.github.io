@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+  
+  <title>为什么static函数不能mock - Tiehichi&#39;s Blog</title>
+  <link rel="icon" href="https://imgur.com/pPCZVX8.png" type="image/x-icon">
+  <link href="https://fonts.googleapis.com/css?family=Bungee+Inline|Noto+Sans+SC|Ubuntu+Mono&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  
+  <meta name="keywords" content=>
+  
+  
+  
+    <link rel="alternate" href="/atom.xml " title="Tiehichi&#39;s Blog" type="application/atom+xml">
+  
+
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+
+  <body>
+    <div class="container">
+      <header class="header">
+  <div class="blog-title">
+    <a href="/" class="logo">Tiehichi&#39;s Blog</a>
+    <div class="subtitle"></div>
+  </div>
+  <nav class="navbar">
+    <ul class="menu">
+      
+        <li class="menu-item">
+          <a href="/" class="menu-item-link">Home</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/categories" class="menu-item-link">Categories</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/about" class="menu-item-link">About</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/atom.xml" class="menu-item-link">RSS</a>
+        </li>
+      
+    </ul>
+  </nav>
+</header>
+<script>
+  var link="";
+  var a = document.getElementsByTagName('img');
+  for(i=0;i<a.length;i++){
+    a[i].referrerPolicy='no-referrer';
+    link = a[i].src;
+    a[i].src = link+'?t='+Math.random();
+  }
+</script>
+
+<article class="post">
+  <div class="post-title">
+    <h1 class="article-title">为什么static函数不能mock</h1>
+  </div>
+
+  <!-- 文章目录 -->
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#通过连接器参数进行mock"><span class="toc-text">通过连接器参数进行mock</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#mock的原理"><span class="toc-text">mock的原理</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#不能mock的函数"><span class="toc-text">不能mock的函数</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#为什么"><span class="toc-text">为什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#结论"><span class="toc-text">结论</span></a></li></ol>
+
+  <div class="post-content">
+    <p>在使用<code>cmocka</code>单元测试框架进行单元测试的过程中，发现声明为<code>static</code>的函数是不能<code>mock</code>的；为什么这类函数无法被<code>mock</code>呢？需要先分析一下<code>mock</code>函数的实现原理。</p>
+<h2 id="通过连接器参数进行mock"><a href="#通过连接器参数进行mock" class="headerlink" title="通过连接器参数进行mock"></a>通过连接器参数进行<code>mock</code></h2><p>很多<code>C</code>语言的单元测试框架，需要通过设置链接器参数来实现函数的<code>mock</code>，例如想要<code>mock</code> <code>open</code>这个系统调用，需要在编译时添加参数：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">-Wl,--wrap=open</span><br></pre></td></tr></table></figure>
+
+<p><code>-Wl</code>是指后面的参数是添加给连接器的；指定该参数后，调用<code>open</code>的时候会转而调用<code>__wrap_open</code>，所以我们只需要实现一个<code>__wrap_open</code>函数，就可以屏蔽<code>open</code>系统调用；如果需要调用原来的<code>open</code>函数，可以显式调用<code>__real_open</code>。</p>
+<h2 id="mock的原理"><a href="#mock的原理" class="headerlink" title="mock的原理"></a><code>mock</code>的原理</h2><p>根据<code>mock</code>的实现方式，我们可以确定<code>C</code>语言的<code>mock</code>实现是连接器在链接程序时，将<code>open</code>符号链接到<code>__wrap_open</code>，并且将<code>__real_open</code>符号链接到系统调用<code>open</code>。</p>
+<h2 id="不能mock的函数"><a href="#不能mock的函数" class="headerlink" title="不能mock的函数"></a>不能<code>mock</code>的函数</h2><p>确定了<code>mock</code>的实现方式，就可以分析一下这些不能<code>mock</code>的函数究竟为什么不能<code>mock</code>。</p>
+<p>声明为<code>static</code>的函数，特点是只能在当前文件内使用，所以如果被测试函数调用了<code>static</code>的函数，这两个函数必然在同一个文件中，并且不能被其他文件中的函数调用。</p>
+<h2 id="为什么"><a href="#为什么" class="headerlink" title="为什么"></a>为什么</h2><p>为了确认这个问题，我们准备一份测试用的代码，分为两个<code>.c</code>文件：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * func.c</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> <span class="title">function_1</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">12</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">function_2</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> x = function_1();</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">"x = %d\n"</span>, x);</span><br><span class="line">    <span class="keyword">return</span> x;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * main.c</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">extern</span> <span class="keyword">int</span> <span class="title">function_2</span><span class="params">()</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">void</span>)</span> </span>&#123;</span><br><span class="line">    function_2();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>编译生成<code>.o</code>文件，并链接生成可执行文件</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">gcc -g -O0 -c func.c</span><br><span class="line">gcc -g -O0 -c main.c</span><br><span class="line">gcc -o main main.o func.o -g -O0</span><br></pre></td></tr></table></figure>
+
+<p>接着我们来分析一下<code>function_2()</code>函数，函数中有两次函数调用，一次调用同文件中的<code>function_1()</code>，另一次调用<code>printf()</code>，所以其对应的汇编代码中，应该存在两个<code>callq</code>指令(<code>x64</code>平台)；所以我们来使用<code>objdump</code>来反汇编一下<code>func.o</code>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">-&gt; % objdump -d func.o</span><br><span class="line"></span><br><span class="line">func.o:     file format elf64-x86-64</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">Disassembly of section .text:</span><br><span class="line"></span><br><span class="line">0000000000000000 &lt;function_1&gt;:</span><br><span class="line">   0:    f3 0f 1e fa              endbr64</span><br><span class="line">   4:    55                       push   %rbp</span><br><span class="line">   5:    48 89 e5                 mov    %rsp,%rbp</span><br><span class="line">   8:    b8 0c 00 00 00           mov    <span class="variable">$0xc</span>,%eax</span><br><span class="line">   d:    5d                       pop    %rbp</span><br><span class="line">   e:    c3                       retq</span><br><span class="line"></span><br><span class="line">000000000000000f &lt;function_2&gt;:</span><br><span class="line">   f:    f3 0f 1e fa              endbr64</span><br><span class="line">  13:    55                       push   %rbp</span><br><span class="line">  14:    48 89 e5                 mov    %rsp,%rbp</span><br><span class="line">  17:    48 83 ec 10              sub    <span class="variable">$0x10</span>,%rsp</span><br><span class="line">  1b:    b8 00 00 00 00           mov    <span class="variable">$0x0</span>,%eax</span><br><span class="line">  20:    e8 db ff ff ff           callq  0 &lt;function_1&gt;</span><br><span class="line">  25:    89 45 <span class="built_in">fc</span>                 mov    %eax,-0x4(%rbp)</span><br><span class="line">  28:    8b 45 <span class="built_in">fc</span>                 mov    -0x4(%rbp),%eax</span><br><span class="line">  2b:    89 c6                    mov    %eax,%esi</span><br><span class="line">  2d:    48 8d 3d 00 00 00 00     lea    0x0(%rip),%rdi        <span class="comment"># 34 &lt;function_2+0x25&gt;</span></span><br><span class="line">  34:    b8 00 00 00 00           mov    <span class="variable">$0x0</span>,%eax</span><br><span class="line">  39:    e8 00 00 00 00           callq  3e &lt;function_2+0x2f&gt;</span><br><span class="line">  3e:    8b 45 <span class="built_in">fc</span>                 mov    -0x4(%rbp),%eax</span><br><span class="line">  41:    c9                       leaveq</span><br><span class="line">  42:    c3                       retq</span><br></pre></td></tr></table></figure>
+
+<p>注意<code>function_2</code>的汇编代码中，两个<code>callq</code>指令的不同：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">20:    e8 db ff ff ff           callq  0 &lt;function_1&gt;</span><br><span class="line">39:    e8 00 00 00 00           callq  3e &lt;function_2+0x2f&gt;</span><br></pre></td></tr></table></figure>
+
+<p><code>callq</code>指令码为<code>e8</code>，第一个<code>callq</code>调用<code>function_1</code>，地址为<code>ff ff ff db</code>，<code>x86</code>指令集上<code>callq</code>的地址用补码表示，所以这个地址实际上是个负数，对应的十进制为<code>-37</code>，<code>callq</code>下一条指令的起始地址，加上这个相对跳转地址，刚好是<code>function_1</code>的地址。</p>
+<p>再看一下第二条<code>callq</code>指令，它的地址是<code>00 00 00 00</code>，实际上是等待填充，现在还不知道之后会跳转到哪。</p>
+<p>再来反汇编可执行文件看一下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">0000000000001171 &lt;function_2&gt;:</span><br><span class="line">    1171:    f3 0f 1e fa              endbr64</span><br><span class="line">    1175:    55                       push   %rbp</span><br><span class="line">    1176:    48 89 e5                 mov    %rsp,%rbp</span><br><span class="line">    1179:    48 83 ec 10              sub    <span class="variable">$0x10</span>,%rsp</span><br><span class="line">    117d:    b8 00 00 00 00           mov    <span class="variable">$0x0</span>,%eax</span><br><span class="line">    1182:    e8 db ff ff ff           callq  1162 &lt;function_1&gt;</span><br><span class="line">    1187:    89 45 <span class="built_in">fc</span>                 mov    %eax,-0x4(%rbp)</span><br><span class="line">    118a:    8b 45 <span class="built_in">fc</span>                 mov    -0x4(%rbp),%eax</span><br><span class="line">    118d:    89 c6                    mov    %eax,%esi</span><br><span class="line">    118f:    48 8d 3d 6e 0e 00 00     lea    0xe6e(%rip),%rdi        <span class="comment"># 2004 &lt;_IO_stdin_used+0x4&gt;</span></span><br><span class="line">    1196:    b8 00 00 00 00           mov    <span class="variable">$0x0</span>,%eax</span><br><span class="line">    119b:    e8 b0 fe ff ff           callq  1050 &lt;<span class="built_in">printf</span>@plt&gt;</span><br><span class="line">    11a0:    8b 45 <span class="built_in">fc</span>                 mov    -0x4(%rbp),%eax</span><br><span class="line">    11a3:    c9                       leaveq</span><br><span class="line">    11a4:    c3                       retq</span><br><span class="line">    11a5:    66 2e 0f 1f 84 00 00     nopw   %cs:0x0(%rax,%rax,1)</span><br><span class="line">    11ac:    00 00 00</span><br><span class="line">    11af:    90                       nop</span><br></pre></td></tr></table></figure>
+
+<p>我们仍然关注<code>function_2</code>中的两条<code>callq</code>指令：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">1182:    e8 db ff ff ff           callq  1162 &lt;function_1&gt;</span><br><span class="line">119b:    e8 b0 fe ff ff           callq  1050 &lt;printf@plt&gt;</span><br></pre></td></tr></table></figure>
+
+<p>第一条<code>callq</code>的相对跳转地址并未发生任何变化，但是第二条指令中，地址已经被填充，而不再是之前的<code>00 00 00 00</code>。</p>
+<h2 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h2><p>根据前面的分析我们可以确定，<code>static</code>函数被调用时，调用地址再编译时就已经确定，并且在链接时不会再去改变它的相对地址；而我们的<code>mock</code>参数是添加在链接器上的，理所当然无法<code>mock</code> <code>static</code>函数。</p>
+
+  </div>
+  <div class="post-meta">
+    <span class="post-time" style="color:#646060;font-size:13px">2020-09-29</span>
+  </div>
+
+  <div class="post-footer">
+    
+
+    <a href="#top" class="top">Back to Top</a>
+  </div>
+</article>
+
+<!-- 评论插件 -->
+
+    <div id="gitalk-container"></div>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+    <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+    <script>
+    var gitalk = new Gitalk({
+        id: '为什么static函数不能mock',
+        owner: 'tiehichi',
+        admin: ['tiehichi'],
+        repo: 'tiehichi.github.io',
+        clientID: 'bf2f550864240e94ca3f',
+        clientSecret: 'a03922278132bc805aa4a44d72e5250166095dbe',
+    })
+    gitalk.render('gitalk-container')
+    </script>
+
+
+<!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "8076240da6a9474eb806a2772561d84a"}'></script><!-- End Cloudflare Web Analytics -->
+<footer>
+  2022
+  <span class="author">
+    Tiehichi
+  </span>
+</footer>
+
+
+    </div>
+  </body>
+</html>

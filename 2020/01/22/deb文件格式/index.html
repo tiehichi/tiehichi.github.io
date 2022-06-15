@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+  
+  <title>deb文件格式 - Tiehichi&#39;s Blog</title>
+  <link rel="icon" href="https://imgur.com/pPCZVX8.png" type="image/x-icon">
+  <link href="https://fonts.googleapis.com/css?family=Bungee+Inline|Noto+Sans+SC|Ubuntu+Mono&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  
+  <meta name="keywords" content=>
+  
+  
+  
+    <link rel="alternate" href="/atom.xml " title="Tiehichi&#39;s Blog" type="application/atom+xml">
+  
+
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+
+  <body>
+    <div class="container">
+      <header class="header">
+  <div class="blog-title">
+    <a href="/" class="logo">Tiehichi&#39;s Blog</a>
+    <div class="subtitle"></div>
+  </div>
+  <nav class="navbar">
+    <ul class="menu">
+      
+        <li class="menu-item">
+          <a href="/" class="menu-item-link">Home</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/categories" class="menu-item-link">Categories</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/about" class="menu-item-link">About</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/atom.xml" class="menu-item-link">RSS</a>
+        </li>
+      
+    </ul>
+  </nav>
+</header>
+<script>
+  var link="";
+  var a = document.getElementsByTagName('img');
+  for(i=0;i<a.length;i++){
+    a[i].referrerPolicy='no-referrer';
+    link = a[i].src;
+    a[i].src = link+'?t='+Math.random();
+  }
+</script>
+
+<article class="post">
+  <div class="post-title">
+    <h1 class="article-title">deb文件格式</h1>
+  </div>
+
+  <!-- 文章目录 -->
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#文件格式"><span class="toc-text">文件格式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#解压deb包"><span class="toc-text">解压deb包</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#dpkg-deb命令"><span class="toc-text">dpkg-deb命令</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#查看deb包信息"><span class="toc-text">查看deb包信息</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#解压deb软件包"><span class="toc-text">解压deb软件包</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#打包deb软件包"><span class="toc-text">打包deb软件包</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#control压缩包"><span class="toc-text">control压缩包</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#control"><span class="toc-text">control</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#md5sums"><span class="toc-text">md5sums</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#conffiles"><span class="toc-text">conffiles</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#perins-postins-prerm-postrm"><span class="toc-text">perins, postins, prerm, postrm</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#config"><span class="toc-text">config</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#shlibs"><span class="toc-text">shlibs</span></a></li></ol></li></ol>
+
+  <div class="post-content">
+    <p>deb软件包实际上是<code>archive file</code>，可以使用<code>ar</code>命令进行打包和解包</p>
+<h2 id="文件格式"><a href="#文件格式" class="headerlink" title="文件格式"></a>文件格式</h2><p>以下图片来自<a href="https://en.wikipedia.org/wiki/Deb_(file_format)" target="_blank" rel="noopener">维基百科</a></p>
+<p><img src="https://i.loli.net/2020/01/22/216GSpUtJ3cwbLZ.png" alt="Frhed_hex_editor_displaying_deb_package.png"></p>
+<p><img src="https://i.loli.net/2020/01/22/XW89UdHnClJfoT1.png" alt="Deb_File_Structure.png"></p>
+<h2 id="解压deb包"><a href="#解压deb包" class="headerlink" title="解压deb包"></a>解压deb包</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 查看deb包含的文件</span></span><br><span class="line">~ $ ar tv google-chrome-stable_current_amd64.deb </span><br><span class="line">rw-r--r-- 0/0      4 Jan 16 09:44 2020 debian-binary</span><br><span class="line">rw-r--r-- 0/0  12131 Jan 16 09:44 2020 control.tar.gz</span><br><span class="line">rw-r--r-- 0/0 62181000 Jan 16 09:46 2020 data.tar.xz</span><br><span class="line"></span><br><span class="line"><span class="comment"># 解压deb包</span></span><br><span class="line">~ $ ar x google-chrome-stable_current_amd64.deb</span><br></pre></td></tr></table></figure>
+
+<p>使用<code>ar</code>命令解压后得到三个文件，分别是<code>debian-binary</code>, <code>control</code>压缩包, <code>data</code>压缩包。</p>
+<ul>
+<li><p><code>debian-binary</code></p>
+<p>纯文本文件，只有一行内容，记录了当前deb格式的版本号：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">~ $ cat debian-binary </span><br><span class="line">2.0</span><br></pre></td></tr></table></figure>
+</li>
+<li><p><code>control</code>压缩包</p>
+<p><code>control</code>包使用<code>tar</code>打包，支持<code>gzip</code>和<code>xz</code>压缩方式，其中包含了deb软件包的控制文件</p>
+</li>
+<li><p><code>data</code>压缩包</p>
+<p><code>data</code>压缩包中包含了实际要安装的文件，同样使用<code>tar</code>打包，支持<code>gzip</code>、<code>bzip2</code>、<code>lzma</code>和<code>xz</code>压缩</p>
+</li>
+</ul>
+<h2 id="dpkg-deb命令"><a href="#dpkg-deb命令" class="headerlink" title="dpkg-deb命令"></a><code>dpkg-deb</code>命令</h2><p><code>dpkg-deb</code>命令是<code>dpkg</code>工具包中用来操作deb软件包的命令，可以解压、查看和重新打包deb文件。</p>
+<h3 id="查看deb包信息"><a href="#查看deb包信息" class="headerlink" title="查看deb包信息"></a>查看deb包信息</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">dpkg-deb -c &lt;deb package&gt;    <span class="comment"># 列出deb包中所有待安装文件</span></span><br><span class="line">dpkg-deb -I &lt;deb package&gt;    <span class="comment"># 显示deb包的详细信息</span></span><br><span class="line">dpkg-deb -f &lt;deb package&gt;    <span class="comment"># 显示deb包中control文件的各个字段</span></span><br><span class="line">dpkg-deb -W &lt;deb package&gt;    <span class="comment"># 显示软件包信息和版本</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="解压deb软件包"><a href="#解压deb软件包" class="headerlink" title="解压deb软件包"></a>解压deb软件包</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">dpkg-deb -e &lt;deb package&gt; &lt;directory&gt;    <span class="comment"># 解压deb包的控制信息</span></span><br><span class="line">dpkg-deb -x &lt;deb package&gt; &lt;directory&gt;    <span class="comment"># 解压deb包中的待安装文件</span></span><br></pre></td></tr></table></figure>
+
+<p>与使用<code>ar</code>命令解压不同，<code>ar</code>命令会解压出<code>control</code>和<code>data</code>两个压缩包，而<code>dpkg-deb</code>会继续对压缩包进行解压，输出其中的文件。</p>
+<h3 id="打包deb软件包"><a href="#打包deb软件包" class="headerlink" title="打包deb软件包"></a>打包deb软件包</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">dpkg-deb -b &lt;directory&gt; &lt;deb name&gt;    <span class="comment"># 构建deb软件包</span></span><br></pre></td></tr></table></figure>
+
+<p>该命令中，待构建文件夹的结构为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">&lt;top directory&gt;/</span><br><span class="line">	|---- DEBIAN/</span><br><span class="line">	|		|---- control</span><br><span class="line">	|		|---- md5sums</span><br><span class="line">	|---- &lt;path to install&gt;/</span><br><span class="line">			|---- &lt;file&gt;</span><br></pre></td></tr></table></figure>
+
+<p>其中<code>DEBIAN</code>文件夹内必须包含<code>control</code>文件，其他控制文件及脚本按需添加，文件安装的路径与<code>top dir</code>中其他文件的路径一致，即<code>top dir</code>作为<code>fakeroot</code>。</p>
+<h2 id="control压缩包"><a href="#control压缩包" class="headerlink" title="control压缩包"></a><code>control</code>压缩包</h2><p><code>control</code>包中包含以下文件：</p>
+<ul>
+<li><code>control</code></li>
+<li><code>md5sums</code></li>
+<li><code>conffiles</code></li>
+<li><code>perins</code>, <code>postins</code>, <code>prerm</code>, <code>postrm</code></li>
+<li><code>config</code></li>
+<li><code>shlibs</code></li>
+</ul>
+<h3 id="control"><a href="#control" class="headerlink" title="control"></a><code>control</code></h3><p><code>control</code>文件包含了软件包的信息，例如<code>Chrome</code>安装包的<code>control</code>文件内容如下</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">Package: google-chrome-stable</span><br><span class="line">Version: 79.0.3945.130-1</span><br><span class="line">Architecture: amd64</span><br><span class="line">Maintainer: Chrome Linux Team &lt;chromium-dev@chromium.org&gt;</span><br><span class="line">Installed-Size: 215627</span><br><span class="line">Pre-Depends: dpkg (&gt;= 1.14.0)</span><br><span class="line">Depends: ca-certificates, fonts-liberation, libappindicator3-1, libasound2 (&gt;= 1.0.16), libatk-bridge2.0-0 (&gt;= 2.5.3), libatk1.0-0 (&gt;= 2.2.0), libatspi2.0-0 (&gt;= 2.9.90), libc6 (&gt;= 2.16), libcairo2 (&gt;= 1.6.0), libcups2 (&gt;= 1.4.0), libdbus-1-3 (&gt;= 1.5.12), libexpat1 (&gt;= 2.0.1), libgcc1 (&gt;= 1:3.0), libgdk-pixbuf2.0-0 (&gt;= 2.22.0), libglib2.0-0 (&gt;= 2.31.8), libgtk-3-0 (&gt;= 3.9.10), libnspr4 (&gt;= 2:4.9-2~), libnss3 (&gt;= 2:3.22), libpango-1.0-0 (&gt;= 1.14.0), libpangocairo-1.0-0 (&gt;= 1.14.0), libx11-6 (&gt;= 2:1.4.99.1), libx11-xcb1, libxcb1 (&gt;= 1.6), libxcomposite1 (&gt;= 1:0.3-1), libxcursor1 (&gt;&gt; 1.1.2), libxdamage1 (&gt;= 1:1.1), libxext6, libxfixes3 (&gt;= 1:5.0), libxi6 (&gt;= 2:1.2.99.4), libxrandr2 (&gt;= 2:1.2.99.3), libxrender1, libxss1, libxtst6, wget, xdg-utils (&gt;= 1.0.2)</span><br><span class="line">Recommends: libu2f-udev</span><br><span class="line">Provides: www-browser</span><br><span class="line">Section: web</span><br><span class="line">Priority: optional</span><br><span class="line">Description: The web browser from Google</span><br><span class="line"> Google Chrome is a browser that combines a minimal design with sophisticated technology to make the web faster, safer, and easier.</span><br></pre></td></tr></table></figure>
+
+<p>关于control文件中各个字段的意义及格式可以参考<a href="https://manpages.debian.org/unstable/dpkg-dev/deb-control.5.en.html" target="_blank" rel="noopener">Debian官方文档</a>。</p>
+<h3 id="md5sums"><a href="#md5sums" class="headerlink" title="md5sums"></a><code>md5sums</code></h3><p>该文件中记录了软件包中所有待安装文件的MD5校验和，格式如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">1d15dcfb6bb23751f76a2b7b844d3c57  sbin/parted</span><br><span class="line">4eb9cc2e192f1b997cf13ff0b921af74  usr/share/man/man8/parted.8.gz</span><br><span class="line">2f356768104a09092e26a6abb012c95e  usr/share/doc/parted/README.Debian</span><br><span class="line">a6259bd193f8f150c171c88df2158e3e  usr/share/doc/parted/copyright</span><br><span class="line">7f8078127a689d647586420184fc3953  usr/share/doc/parted/changelog.Debian.gz</span><br><span class="line">98f217a3bf8a7407d66fd6ac8c5589b7  usr/share/doc/parted/changelog.gz</span><br></pre></td></tr></table></figure>
+
+<h3 id="conffiles"><a href="#conffiles" class="headerlink" title="conffiles"></a><code>conffiles</code></h3><p>该文件内容表示，软件包的待安装文件中，哪些是配置文件，文件内容格式如：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">/etc/cups/snmp.conf</span><br><span class="line">/etc/cups/cupsd.conf</span><br></pre></td></tr></table></figure>
+
+<p>执行</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">dpkg --status &lt;package&gt;</span><br></pre></td></tr></table></figure>
+
+<p>在输出结果中的<code>conffiles</code>字段可以看到这些内容，例如<code>cups</code>包的输出中包含：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Conffiles:</span><br><span class="line"> /etc/cups/snmp.conf 47b8f1c3fecdc44e3d1fdee4b9eeb3f5</span><br></pre></td></tr></table></figure>
+
+<h3 id="perins-postins-prerm-postrm"><a href="#perins-postins-prerm-postrm" class="headerlink" title="perins, postins, prerm, postrm"></a><code>perins</code>, <code>postins</code>, <code>prerm</code>, <code>postrm</code></h3><p>这四个文件是在包安装和删除前后触发执行的脚本，其中<code>perins</code>和<code>postins</code>分别在安装前后执行，<code>prerm</code>和<code>postrm</code>在卸载前后执行</p>
+<h3 id="config"><a href="#config" class="headerlink" title="config"></a><code>config</code></h3><p><code>config</code>是一个可选的，支持<code>debconf</code>机制的脚本，参考<a href="http://www.fifi.org/doc/debconf-doc/tutorial.html#AEN113" target="_blank" rel="noopener">debconf教程</a>。</p>
+<h3 id="shlibs"><a href="#shlibs" class="headerlink" title="shlibs"></a><code>shlibs</code></h3><p>该文件列出软件包依赖的共享库，参考<a href="https://manpages.debian.org/unstable/dpkg-dev/dpkg-shlibdeps.1.en.html#Shlibs_files" target="_blank" rel="noopener">Debian官方文档</a>。</p>
+
+  </div>
+  <div class="post-meta">
+    <span class="post-time" style="color:#646060;font-size:13px">2020-01-22</span>
+  </div>
+
+  <div class="post-footer">
+    
+
+    <a href="#top" class="top">Back to Top</a>
+  </div>
+</article>
+
+<!-- 评论插件 -->
+
+    <div id="gitalk-container"></div>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+    <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+    <script>
+    var gitalk = new Gitalk({
+        id: 'deb文件格式',
+        owner: 'tiehichi',
+        admin: ['tiehichi'],
+        repo: 'tiehichi.github.io',
+        clientID: 'bf2f550864240e94ca3f',
+        clientSecret: 'a03922278132bc805aa4a44d72e5250166095dbe',
+    })
+    gitalk.render('gitalk-container')
+    </script>
+
+
+<!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "8076240da6a9474eb806a2772561d84a"}'></script><!-- End Cloudflare Web Analytics -->
+<footer>
+  2022
+  <span class="author">
+    Tiehichi
+  </span>
+</footer>
+
+
+    </div>
+  </body>
+</html>

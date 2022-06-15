@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+  
+  <title>在树莓派上使用 PN532 NFC读卡器[0]——libnfc的安装配置 - Tiehichi&#39;s Blog</title>
+  <link rel="icon" href="https://imgur.com/pPCZVX8.png" type="image/x-icon">
+  <link href="https://fonts.googleapis.com/css?family=Bungee+Inline|Noto+Sans+SC|Ubuntu+Mono&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  
+  <meta name="keywords" content=>
+  
+  
+  
+    <link rel="alternate" href="/atom.xml " title="Tiehichi&#39;s Blog" type="application/atom+xml">
+  
+
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+
+  <body>
+    <div class="container">
+      <header class="header">
+  <div class="blog-title">
+    <a href="/" class="logo">Tiehichi&#39;s Blog</a>
+    <div class="subtitle"></div>
+  </div>
+  <nav class="navbar">
+    <ul class="menu">
+      
+        <li class="menu-item">
+          <a href="/" class="menu-item-link">Home</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/categories" class="menu-item-link">Categories</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/about" class="menu-item-link">About</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/atom.xml" class="menu-item-link">RSS</a>
+        </li>
+      
+    </ul>
+  </nav>
+</header>
+<script>
+  var link="";
+  var a = document.getElementsByTagName('img');
+  for(i=0;i<a.length;i++){
+    a[i].referrerPolicy='no-referrer';
+    link = a[i].src;
+    a[i].src = link+'?t='+Math.random();
+  }
+</script>
+
+<article class="post">
+  <div class="post-title">
+    <h1 class="article-title">在树莓派上使用 PN532 NFC读卡器[0]——libnfc的安装配置</h1>
+  </div>
+
+  <!-- 文章目录 -->
+  <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#PN532芯片介绍"><span class="toc-text">PN532芯片介绍</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#libnfc介绍"><span class="toc-text">libnfc介绍</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#libnfc安装与配置"><span class="toc-text">libnfc安装与配置</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#待续"><span class="toc-text">待续</span></a></li></ol>
+
+  <div class="post-content">
+    <p>最近需要在树莓派上使用使用NFC读取mifare classic卡中的信息，在X宝购买了一块PN532芯片的NFC读卡器，然后使用libnfc提供的接口进行开发，本文介绍一下libnfc的基本使用方法。</p>
+<a id="more"></a>
+
+<h3 id="PN532芯片介绍"><a href="#PN532芯片介绍" class="headerlink" title="PN532芯片介绍"></a>PN532芯片介绍</h3><blockquote>
+<p>PN532是一个高度集成的NFC读写芯片，它包含80C51微控制器内核，集成了13.56MHz下的各种主动/被动式非接触通信方法和协议。</p>
+</blockquote>
+<p>此处给出PN532的<a href="https://cdn-shop.adafruit.com/datasheets/pn532ds.pdf" target="_blank" rel="noopener">DataSheet</a>和<a href="http://www.nxp.com/docs/en/user-guide/141520.pdf" target="_blank" rel="noopener">UserManual</a>。</p>
+<p>PN532支持三种与主机之间的通信接口（可能还支持USB，不过我这块PN532板子上没有USB接口）：</p>
+<ul>
+<li>SPI</li>
+<li>I2C</li>
+<li>UART</li>
+</ul>
+<p>PN532传输模块支持6种不同的工作模式：</p>
+<ul>
+<li>读写器模式，支持ISO/IEC 14443A / MIFARE®机制</li>
+<li>读写器模式，支持 FeliCa机制</li>
+<li>读写器模式，支持ISO/IEC 14443B机制</li>
+<li>卡操作模式，支持ISO 14443A / MIFARE®机制</li>
+<li>卡操作模式，FeliCa机制</li>
+<li>ISO/IEC18092，ECM340点对点</li>
+</ul>
+<p>本文中使用SPI与Raspberry Pi3之间进行通信，接线图就不放了，SPI接口一共就那么几根线。其实使用libnfc进行开发的话，使用什么接口都一样，libnfc会处理底层的通信细节，让开发者专注于PN532于芯片卡之间的通信过程。下文将讲述libnfc的配置方法。</p>
+<h3 id="libnfc介绍"><a href="#libnfc介绍" class="headerlink" title="libnfc介绍"></a>libnfc介绍</h3><blockquote>
+<p>libnfc是GNU公共许可正下发布的第一个免费的底层的NFC SDK和编程API。它对任何人都是完全免费和公开的。这个列表给出了目前<a href="http://nfc-tools.org/index.php?title=Libnfc:Features" target="_blank" rel="noopener">已经支持的功能</a>。libnfc支持所有的主流操作系统，包括GNU/Linux、Mac OS X和windows。其编译工作应该在兼容POSIX的系统中进行。libnfc库支持<a href="http://nfc-tools.org/index.php?title=Devices_compatibility_matrix" target="_blank" rel="noopener">多种NFC硬件</a>，如dongles、flat 和 OEM设备等。libnfc当前支持ISO/IEC 14443协议A、B，Felica、Jewel/Topaz标签和发起者和接收者的点对点数据交换。</p>
+</blockquote>
+<p>在libnfc支持的<a href="http://nfc-tools.org/index.php?title=Devices_compatibility_matrix" target="_blank" rel="noopener">硬件列表</a>中发现，其对PN532的各种接口都提供了很好的支持，So，放心的使用libnfc吧！（说的好像还有别的库可以用一样……）</p>
+<p>目前libnfc的版本停留在1.7.1，可以从GitHub上得到它的<a href="https://github.com/nfc-tools/libnfc" target="_blank" rel="noopener">源码</a>，该网页有libnfc的<a href="http://www.libnfc.org/api/index.html" target="_blank" rel="noopener">官方文档</a>。</p>
+<h3 id="libnfc安装与配置"><a href="#libnfc安装与配置" class="headerlink" title="libnfc安装与配置"></a>libnfc安装与配置</h3><p>开发环境为树莓派3，系统是Raspbian。</p>
+<ol>
+<li><p>安装libnfc的依赖库</p>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get install libusb-dev libpcsclite-dev</span><br></pre></td></tr></table></figure></li>
+<li><p>安装libnfc</p>
+<p> 这里有两种安装方法，直接使用apt安装和源码编译安装。</p>
+<ul>
+<li><p>apt安装</p>
+  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get install libnfc-dev libnfc-bin</span><br></pre></td></tr></table></figure>
+<p>  其中<code>dev</code>包包含libnfc的头文件和链接库文件，<code>bin</code>包包含了一些预编译的二进制工具（其实就是源码文件夹<code>example</code>里面的东西）。</p>
+</li>
+<li><p>源码安装</p>
+<p>  其实源码安装也很简单粗暴，在Raspbian上也没有遇到什么莫名其妙的问题。</p>
+<p>  首先安装CMake，如果已经安装了请忽略这一步：</p>
+  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get install cmake</span><br></pre></td></tr></table></figure>
+<p>  然后<code>cd</code>到libnfc的源码目录中，建立一个build文件夹，在build文件夹中进行编译安装：</p>
+  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">mkdir build</span><br><span class="line"><span class="built_in">cd</span> build</span><br><span class="line">cmake ..</span><br><span class="line">make</span><br><span class="line">sudo make install</span><br><span class="line">sudo ldconfig</span><br></pre></td></tr></table></figure>
+<p>至此libnfc安装完成。</p>
+</li>
+</ul>
+</li>
+<li><p>配置libnfc<br> libnfc安装完成后，需要编辑配置文件<code>/etc/nfc/libnfc.conf</code>，使其能够找到PN532设备，如果系统中没有这个文件，创建它，然后在文件中添加以下内容：</p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"># Allow device auto-detection (default: true)</span><br><span class="line"># Note: if this auto-detection is disabled, user has to set manually a device</span><br><span class="line"># configuration using file or environment variable</span><br><span class="line">allow_autoscan = true</span><br><span class="line"></span><br><span class="line"># Allow intrusive auto-detection (default: false)</span><br><span class="line"># Warning: intrusive auto-detection can seriously disturb other devices</span><br><span class="line"># This option is not recommended, user should prefer to add manually his device.</span><br><span class="line">allow_intrusive_scan = false</span><br><span class="line"></span><br><span class="line"># Set log level (default: error)</span><br><span class="line"># Valid log levels are (in order of verbosity): 0 (none), 1 (error), 2 (info), 3 (debug)</span><br><span class="line"># Note: if you compiled with --enable-debug option, the default log level is &quot;debug&quot;</span><br><span class="line">log_level = 1</span><br><span class="line"></span><br><span class="line"># Manually set default device (no default)</span><br><span class="line"># To set a default device, you must set both name and connstring for your device</span><br><span class="line"># Note: if autoscan is enabled, default device will be the first device available in device list.</span><br><span class="line">device.name = &quot;PN532&quot;</span><br><span class="line">device.connstring = &quot;pn532_spi:/dev/spidev0.0&quot;</span><br></pre></td></tr></table></figure>
+<p> 如果你使用i2c进行通信，将最后一行改为：</p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">device.connstring = &quot;pn532_i2c:/dev/i2c-1&quot;</span><br></pre></td></tr></table></figure>
+<p> 使用串口同理，修改最后一行的设备节点为你的串口设备。</p>
+<p> 配置完成后，使用<code>nfc-list</code>查看是否配置成功，如果你是使用<code>apt</code>安装的<code>libnfc-bin</code>，直接在终端中输入<code>nfc-list</code>即可；如果使用源码安装libnfc，这个工具在libnfc源码文件夹中的<code>build/utils</code>文件夹中。<br> 运行<code>nfc-list</code>后如果看到如下输出，表示libnfc已经配置完成：<br> <img src="https://i.loli.net/2019/01/05/5c3078255dc4e.png" alt="result.png"></p>
+ <div class="tip">
+ 一般情况下不会出现配置失败的情况，如果配置失败，即未能成功打开PN532设备，请检查：树莓派的对应接口是否已经配置，如SPI、I2C等；接线是否正确；PN532设备能否正常工作等。
+ </div>
+
+</li>
+</ol>
+<h3 id="待续"><a href="#待续" class="headerlink" title="待续"></a>待续</h3><p>配置完成libnfc使之能够找到PN532设备之后，才是本系列的重点，请看下文<strong><a href="http://tiehichi.site/2017/09/18/archives/nfc_1/" target="_blank" rel="noopener">在树莓派上使用 PN532 NFC读卡器[1]——Mifare Classic 1K 协议解析</a></strong></p>
+
+  </div>
+  <div class="post-meta">
+    <span class="post-time" style="color:#646060;font-size:13px">2017-07-04</span>
+  </div>
+
+  <div class="post-footer">
+    
+
+    <a href="#top" class="top">Back to Top</a>
+  </div>
+</article>
+
+<!-- 评论插件 -->
+
+    <div id="gitalk-container"></div>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+    <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+    <script>
+    var gitalk = new Gitalk({
+        id: '在树莓派上使用 PN532 NFC读卡器[0]——libnfc的安装配置',
+        owner: 'tiehichi',
+        admin: ['tiehichi'],
+        repo: 'tiehichi.github.io',
+        clientID: 'bf2f550864240e94ca3f',
+        clientSecret: 'a03922278132bc805aa4a44d72e5250166095dbe',
+    })
+    gitalk.render('gitalk-container')
+    </script>
+
+
+<!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "8076240da6a9474eb806a2772561d84a"}'></script><!-- End Cloudflare Web Analytics -->
+<footer>
+  2022
+  <span class="author">
+    Tiehichi
+  </span>
+</footer>
+
+
+    </div>
+  </body>
+</html>

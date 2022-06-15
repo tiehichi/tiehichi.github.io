@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+  
+  <title>ACCESS_ONCE()和READ_ONCE() - Tiehichi&#39;s Blog</title>
+  <link rel="icon" href="https://imgur.com/pPCZVX8.png" type="image/x-icon">
+  <link href="https://fonts.googleapis.com/css?family=Bungee+Inline|Noto+Sans+SC|Ubuntu+Mono&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  
+  <meta name="keywords" content=>
+  
+  
+  
+    <link rel="alternate" href="/atom.xml " title="Tiehichi&#39;s Blog" type="application/atom+xml">
+  
+
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+
+  <body>
+    <div class="container">
+      <header class="header">
+  <div class="blog-title">
+    <a href="/" class="logo">Tiehichi&#39;s Blog</a>
+    <div class="subtitle"></div>
+  </div>
+  <nav class="navbar">
+    <ul class="menu">
+      
+        <li class="menu-item">
+          <a href="/" class="menu-item-link">Home</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/categories" class="menu-item-link">Categories</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/about" class="menu-item-link">About</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/atom.xml" class="menu-item-link">RSS</a>
+        </li>
+      
+    </ul>
+  </nav>
+</header>
+<script>
+  var link="";
+  var a = document.getElementsByTagName('img');
+  for(i=0;i<a.length;i++){
+    a[i].referrerPolicy='no-referrer';
+    link = a[i].src;
+    a[i].src = link+'?t='+Math.random();
+  }
+</script>
+
+<article class="post">
+  <div class="post-title">
+    <h1 class="article-title">ACCESS_ONCE()和READ_ONCE()</h1>
+  </div>
+
+  <!-- 文章目录 -->
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#编译器优化"><span class="toc-text">编译器优化</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#ACCESS-ONCE"><span class="toc-text">ACCESS_ONCE()</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#READ-ONCE"><span class="toc-text">READ_ONCE()</span></a></li></ol>
+
+  <div class="post-content">
+    <p>内核代码中经常看到使用 <code>ACCESS_ONCE()</code> ， <code>READ_ONCE()</code> 和 <code>WRITE_ONCE()</code> 的地方，本文分析一下这几个宏的作用和实现方式。</p>
+<h2 id="编译器优化"><a href="#编译器优化" class="headerlink" title="编译器优化"></a>编译器优化</h2><p>考虑下面这段代码：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> (;;) &#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span> *<span class="title">owner</span>;</span></span><br><span class="line"></span><br><span class="line">    owner = ACCESS_ONCE(lock-&gt;owner);</span><br><span class="line">    <span class="keyword">if</span> (owner &amp;&amp; !mutex_spin_on_owner(lock, owner))</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">    <span class="comment">/* ... */</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>如果忽略 <code>ACCESS_ONCE()</code> 宏，那么编译器可能认为 <code>owner</code> 在循环中并没有被修改，因此不需要每次循环都读取 <code>lock-&gt;owner</code> 并将其赋值给 <code>owner</code> ，那么编译器优化之后的代码就可能变成：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span> *<span class="title">owner</span>;</span></span><br><span class="line">owner = ACCESS_ONCE(lock-&gt;owner);</span><br><span class="line"><span class="keyword">for</span> (;;) &#123;</span><br><span class="line">    <span class="keyword">if</span> (owner &amp;&amp; !mutex_spin_on_owner(lock, owner))</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">    <span class="comment">/* ... */</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>但是 <code>lock-&gt;owner</code> 可能会被另外一个线程改变，而这段优化后的代码无法捕获这种改变，会引起代码运行结果异常； <code>ACCESS_ONCE()</code> 宏的作用就是阻止编译器的优化。</p>
+<h2 id="ACCESS-ONCE"><a href="#ACCESS-ONCE" class="headerlink" title="ACCESS_ONCE()"></a>ACCESS_ONCE()</h2><p><code>ACCESS_ONCE()</code> 宏的实现位于 <code>include/linux/compiler.h</code> 中：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> ACCESS_ONCE(x) (*(volatile typeof(x) *)&amp;(x))</span></span><br></pre></td></tr></table></figure>
+
+<p>该宏为变量 <code>x</code> 临时添加 <code>volatile</code> 关键字来阻止编译器的优化，如重排序、合并访问等。<br>这里需要思考一个问题，一般在编写用户层代码时，如果一个变量可能在多个线程之间共享，我们会在变量声明的时候为其添加 <code>volatile</code> 关键字，为什么内核中要使用这种方式，而不是在声明时就添加 <code>volatile</code> 呢？我的理解是声明时添加 <code>volatile</code> ，会阻止编译器对该变量的任何优化，这会让代码整体产生一定的性能损耗；而内核为了极致的性能，仅在需要阻止编译器优化时添加 <code>volatile</code> ，其余的地方仍然让编译器尽可能的进行优化。</p>
+<h2 id="READ-ONCE"><a href="#READ-ONCE" class="headerlink" title="READ_ONCE()"></a>READ_ONCE()</h2><p>较新版本的内核中已经很少使用 <code>ACCESS_ONCE()</code> 宏，而转为使用 <code>READ_ONCE()</code> 。<br><code>READ_ONCE()</code> 的引入源于一个编译器bug：在GCC 4.6和4.7版本中，对于非标量数据类型，例如结构体，编译器会自动移除变量的 <code>volatile</code> 关键字。解决这个问题可以从编译器的角度入手，修复编译器bug，但一来很多系统仍在使用GCC 4.6和4.7，二来这个bug的出现也说明了 <code>ACCESS_ONCE()</code> 宏的实现不够健壮。为了解决这个问题，同时保持代码的兼容性，最终内核引入了 <code>READ_ONCE()</code> 宏，并保留了 <code>ACCESS_ONCE()</code> 的实现。<br><code>READ_ONCE()</code> 实现如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> __READ_ONCE_SIZE						\</span></span><br><span class="line">(&#123;									\</span><br><span class="line">	<span class="keyword">switch</span> (<span class="built_in">size</span>) &#123;							\</span><br><span class="line">	<span class="keyword">case</span> <span class="number">1</span>: *(__u8 *)res = *(<span class="keyword">volatile</span> __u8 *)p; <span class="keyword">break</span>;		\</span><br><span class="line">	<span class="keyword">case</span> <span class="number">2</span>: *(__u16 *)res = *(<span class="keyword">volatile</span> __u16 *)p; <span class="keyword">break</span>;		\</span><br><span class="line">	<span class="keyword">case</span> <span class="number">4</span>: *(__u32 *)res = *(<span class="keyword">volatile</span> __u32 *)p; <span class="keyword">break</span>;		\</span><br><span class="line">	<span class="keyword">case</span> <span class="number">8</span>: *(__u64 *)res = *(<span class="keyword">volatile</span> __u64 *)p; <span class="keyword">break</span>;		\</span><br><span class="line">	<span class="keyword">default</span>:							\</span><br><span class="line">		barrier();						\</span><br><span class="line">		__builtin_memcpy((<span class="keyword">void</span> *)res, (<span class="keyword">const</span> <span class="keyword">void</span> *)p, <span class="built_in">size</span>);	\</span><br><span class="line">		barrier();						\</span><br><span class="line">	&#125;								\</span><br><span class="line">&#125;)</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> __always_inline</span><br><span class="line"><span class="keyword">void</span> __read_once_size(<span class="keyword">const</span> <span class="keyword">volatile</span> <span class="keyword">void</span> *p, <span class="keyword">void</span> *res, <span class="keyword">int</span> <span class="built_in">size</span>)</span><br><span class="line">&#123;</span><br><span class="line">	__READ_ONCE_SIZE;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>该宏判断变量的大小，对于1、2、4、8个字节的变量，将其转换为对应的标量类型：u8、u16、u32和u64，并添加 <code>volatile</code> 关键字；对于超过8个字节类型，使用 <code>barrier()</code> 来阻止优化。</p>
+
+  </div>
+  <div class="post-meta">
+    <span class="post-time" style="color:#646060;font-size:13px">2021-08-03</span>
+  </div>
+
+  <div class="post-footer">
+    
+
+    <a href="#top" class="top">Back to Top</a>
+  </div>
+</article>
+
+<!-- 评论插件 -->
+
+    <div id="gitalk-container"></div>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+    <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+    <script>
+    var gitalk = new Gitalk({
+        id: 'ACCESS_ONCE()和READ_ONCE()',
+        owner: 'tiehichi',
+        admin: ['tiehichi'],
+        repo: 'tiehichi.github.io',
+        clientID: 'bf2f550864240e94ca3f',
+        clientSecret: 'a03922278132bc805aa4a44d72e5250166095dbe',
+    })
+    gitalk.render('gitalk-container')
+    </script>
+
+
+<!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "8076240da6a9474eb806a2772561d84a"}'></script><!-- End Cloudflare Web Analytics -->
+<footer>
+  2022
+  <span class="author">
+    Tiehichi
+  </span>
+</footer>
+
+
+    </div>
+  </body>
+</html>

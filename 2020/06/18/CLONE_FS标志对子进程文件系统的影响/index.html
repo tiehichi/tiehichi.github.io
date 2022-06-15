@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+  
+  <title>CLONE_FS标志对子进程文件系统的影响 - Tiehichi&#39;s Blog</title>
+  <link rel="icon" href="https://imgur.com/pPCZVX8.png" type="image/x-icon">
+  <link href="https://fonts.googleapis.com/css?family=Bungee+Inline|Noto+Sans+SC|Ubuntu+Mono&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  
+  <meta name="keywords" content=>
+  
+  
+  
+    <link rel="alternate" href="/atom.xml " title="Tiehichi&#39;s Blog" type="application/atom+xml">
+  
+
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+
+  <body>
+    <div class="container">
+      <header class="header">
+  <div class="blog-title">
+    <a href="/" class="logo">Tiehichi&#39;s Blog</a>
+    <div class="subtitle"></div>
+  </div>
+  <nav class="navbar">
+    <ul class="menu">
+      
+        <li class="menu-item">
+          <a href="/" class="menu-item-link">Home</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/categories" class="menu-item-link">Categories</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/about" class="menu-item-link">About</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/atom.xml" class="menu-item-link">RSS</a>
+        </li>
+      
+    </ul>
+  </nav>
+</header>
+<script>
+  var link="";
+  var a = document.getElementsByTagName('img');
+  for(i=0;i<a.length;i++){
+    a[i].referrerPolicy='no-referrer';
+    link = a[i].src;
+    a[i].src = link+'?t='+Math.random();
+  }
+</script>
+
+<article class="post">
+  <div class="post-title">
+    <h1 class="article-title">CLONE_FS标志对子进程文件系统的影响</h1>
+  </div>
+
+  <!-- 文章目录 -->
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#争论"><span class="toc-text">争论</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#系统调用在内核中的实现"><span class="toc-text">系统调用在内核中的实现</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#CLONE-FS标志在clone-中的使用"><span class="toc-text">CLONE_FS标志在clone()中的使用</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#进程的fork"><span class="toc-text">进程的fork</span></a></li></ol>
+
+  <div class="post-content">
+    <h2 id="争论"><a href="#争论" class="headerlink" title="争论"></a>争论</h2><p>这两天在研究沙盒的时候,跟同事争论了一下如下场景: 使用clone加上CLONE_FS创建子进程,父进程使用chroot,是否会同时对子进程的文件系统产生影响. 根据man手册对于CLONE_FS的描述,使用CLONE_FS创建子进程,子进程或者父进程任意一个调用chroot, chdir或者umask, 都会对另一进程产生影响. 具体怎么影响需要看一下内核的源码.</p>
+<h2 id="系统调用在内核中的实现"><a href="#系统调用在内核中的实现" class="headerlink" title="系统调用在内核中的实现"></a>系统调用在内核中的实现</h2><p>Linux的系统调用在定义在<code>include/linux/syscalls.h</code>中，例如<code>clone</code>系统调用，在<code>syscalls.h</code>中的定义为</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> CONFIG_CLONE_BACKWARDS</span></span><br><span class="line"><span class="function">asmlinkage <span class="keyword">long</span> <span class="title">sys_clone</span><span class="params">(<span class="keyword">unsigned</span> <span class="keyword">long</span>, <span class="keyword">unsigned</span> <span class="keyword">long</span>, <span class="keyword">int</span> __user *, <span class="keyword">unsigned</span> <span class="keyword">long</span>,</span></span></span><br><span class="line"><span class="function"><span class="params">            <span class="keyword">int</span> __user *)</span></span>;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">else</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> CONFIG_CLONE_BACKWARDS3</span></span><br><span class="line"><span class="function">asmlinkage <span class="keyword">long</span> <span class="title">sys_clone</span><span class="params">(<span class="keyword">unsigned</span> <span class="keyword">long</span>, <span class="keyword">unsigned</span> <span class="keyword">long</span>, <span class="keyword">int</span>, <span class="keyword">int</span> __user *,</span></span></span><br><span class="line"><span class="function"><span class="params">            <span class="keyword">int</span> __user *, <span class="keyword">unsigned</span> <span class="keyword">long</span>)</span></span>;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">else</span></span></span><br><span class="line"><span class="function">asmlinkage <span class="keyword">long</span> <span class="title">sys_clone</span><span class="params">(<span class="keyword">unsigned</span> <span class="keyword">long</span>, <span class="keyword">unsigned</span> <span class="keyword">long</span>, <span class="keyword">int</span> __user *,</span></span></span><br><span class="line"><span class="function"><span class="params">            <span class="keyword">int</span> __user *, <span class="keyword">unsigned</span> <span class="keyword">long</span>)</span></span>;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br></pre></td></tr></table></figure>
+
+<p>内核中系统调用的实现，一般会使用<code>SYSCALL_DEFINEn</code>宏进行封装，其中的n为系统调用的参数个数；使用该宏时，第一个参数为系统调用的名字，仍以<code>clone</code>为例，对应的<code>SYSCALL_DEFINEn</code>宏的实现为：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> __ARCH_WANT_SYS_CLONE</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> CONFIG_CLONE_BACKWARDS</span></span><br><span class="line">SYSCALL_DEFINE5(clone, <span class="keyword">unsigned</span> <span class="keyword">long</span>, clone_flags, <span class="keyword">unsigned</span> <span class="keyword">long</span>, newsp,</span><br><span class="line">         <span class="keyword">int</span> __user *, parent_tidptr,</span><br><span class="line">         <span class="keyword">unsigned</span> <span class="keyword">long</span>, tls,</span><br><span class="line">         <span class="keyword">int</span> __user *, child_tidptr)</span><br><span class="line"><span class="meta">#<span class="meta-keyword">elif</span> defined(CONFIG_CLONE_BACKWARDS2)</span></span><br><span class="line">SYSCALL_DEFINE5(clone, <span class="keyword">unsigned</span> <span class="keyword">long</span>, newsp, <span class="keyword">unsigned</span> <span class="keyword">long</span>, clone_flags,</span><br><span class="line">         <span class="keyword">int</span> __user *, parent_tidptr,</span><br><span class="line">         <span class="keyword">int</span> __user *, child_tidptr,</span><br><span class="line">         <span class="keyword">unsigned</span> <span class="keyword">long</span>, tls)</span><br><span class="line"><span class="meta">#<span class="meta-keyword">elif</span> defined(CONFIG_CLONE_BACKWARDS3)</span></span><br><span class="line">SYSCALL_DEFINE6(clone, <span class="keyword">unsigned</span> <span class="keyword">long</span>, clone_flags, <span class="keyword">unsigned</span> <span class="keyword">long</span>, newsp,</span><br><span class="line">         <span class="keyword">int</span>, stack_size,</span><br><span class="line">         <span class="keyword">int</span> __user *, parent_tidptr,</span><br><span class="line">         <span class="keyword">int</span> __user *, child_tidptr,</span><br><span class="line">         <span class="keyword">unsigned</span> <span class="keyword">long</span>, tls)</span><br><span class="line"><span class="meta">#<span class="meta-keyword">else</span></span></span><br><span class="line">SYSCALL_DEFINE5(clone, <span class="keyword">unsigned</span> <span class="keyword">long</span>, clone_flags, <span class="keyword">unsigned</span> <span class="keyword">long</span>, newsp,</span><br><span class="line">         <span class="keyword">int</span> __user *, parent_tidptr,</span><br><span class="line">         <span class="keyword">int</span> __user *, child_tidptr,</span><br><span class="line">         <span class="keyword">unsigned</span> <span class="keyword">long</span>, tls)</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">return</span> _do_fork(clone_flags, newsp, <span class="number">0</span>, parent_tidptr, child_tidptr, tls);</span><br><span class="line">&#125;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br></pre></td></tr></table></figure>
+
+<h2 id="CLONE-FS标志在clone-中的使用"><a href="#CLONE-FS标志在clone-中的使用" class="headerlink" title="CLONE_FS标志在clone()中的使用"></a>CLONE_FS标志在clone()中的使用</h2><p><code>clone()</code>系统调用的实现在<code>kernel/fork.c</code>中，该文件中还实现了<code>fork()</code>和<code>vfork()</code>，从该文件中可以确定，<code>fork</code>、<code>vfork</code>和<code>clone</code>在内核中调用的都是<code>_do_fork()</code>函数，只是传递的参数不同。</p>
+<p>函数<code>copy_fs()</code>对<code>CLONE_FS</code>标志进行了检查：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> <span class="title">copy_fs</span><span class="params">(<span class="keyword">unsigned</span> <span class="keyword">long</span> clone_flags, struct task_struct *tsk)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">fs_struct</span> *<span class="title">fs</span> = <span class="title">current</span>-&gt;<span class="title">fs</span>;</span></span><br><span class="line">	<span class="keyword">if</span> (clone_flags &amp; CLONE_FS) &#123;</span><br><span class="line">		<span class="comment">/* tsk-&gt;fs is already what we want */</span></span><br><span class="line">		spin_lock(&amp;fs-&gt;lock);</span><br><span class="line">		<span class="keyword">if</span> (fs-&gt;in_exec) &#123;</span><br><span class="line">			spin_unlock(&amp;fs-&gt;lock);</span><br><span class="line">			<span class="keyword">return</span> -EAGAIN;</span><br><span class="line">		&#125;</span><br><span class="line">		fs-&gt;users++;</span><br><span class="line">		spin_unlock(&amp;fs-&gt;lock);</span><br><span class="line">		<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">	&#125;</span><br><span class="line">	tsk-&gt;fs = copy_fs_struct(fs);</span><br><span class="line">	<span class="keyword">if</span> (!tsk-&gt;fs)</span><br><span class="line">		<span class="keyword">return</span> -ENOMEM;</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>可以看到如果设置了<code>CLONE_FS</code>标志，则将当前进程的<code>fs-&gt;users</code>加1，否则调用<code>copy_fs_struct()</code>，并将子进程的<code>fs</code>结构指向其返回值：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">struct fs_struct *<span class="title">copy_fs_struct</span><span class="params">(struct fs_struct *old)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">fs_struct</span> *<span class="title">fs</span> = <span class="title">kmem_cache_alloc</span>(<span class="title">fs_cachep</span>, <span class="title">GFP_KERNEL</span>);</span></span><br><span class="line">	<span class="comment">/* We don't need to lock fs - think why ;-) */</span></span><br><span class="line">	<span class="keyword">if</span> (fs) &#123;</span><br><span class="line">		fs-&gt;users = <span class="number">1</span>;</span><br><span class="line">		fs-&gt;in_exec = <span class="number">0</span>;</span><br><span class="line">		spin_lock_init(&amp;fs-&gt;lock);</span><br><span class="line">		seqcount_init(&amp;fs-&gt;seq);</span><br><span class="line">		fs-&gt;umask = old-&gt;umask;</span><br><span class="line"></span><br><span class="line">		spin_lock(&amp;old-&gt;lock);</span><br><span class="line">		fs-&gt;root = old-&gt;root;</span><br><span class="line">		path_get(&amp;fs-&gt;root);</span><br><span class="line">		fs-&gt;pwd = old-&gt;pwd;</span><br><span class="line">		path_get(&amp;fs-&gt;pwd);</span><br><span class="line">		spin_unlock(&amp;old-&gt;lock);</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> fs;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>该函数实现非常简单，就是创建新的<code>fs_struc</code>t结构体，并把当前进程<code>fs</code>结构中的值，然后返回新的fs结构体。<br>通过这两个函数，就可以得出结论：</p>
+<ol>
+<li><p>通过<code>clone</code>创建子进程，未指定<code>CLONE_FS</code>时，子进程拥有自己的<code>fs</code>结构，其初始值与父进程的<code>fs</code>结构相同；双方通过<code>chroot</code>、<code>chdir</code>修改<code>fs</code>结构时，均不影响另一个进程。</p>
+</li>
+<li><p>指定<code>CLONE_FS</code>时，父子进程结构体中<code>fs</code>字段指向同一块内存区域，所以任何一方使用<code>chroot</code>、<code>chdir</code>等修改<code>fs</code>结构时，也会对应一个进程生效。</p>
+</li>
+</ol>
+<h2 id="进程的fork"><a href="#进程的fork" class="headerlink" title="进程的fork"></a>进程的fork</h2><p>进程的<code>fork</code>，关键在于进程结构体的复制，而这个过程是在<code>dup_task_struct()</code>中实现的，从<code>fork</code>、<code>vfork</code>、<code>clone</code>开始，调用顺序为：<br><code>clone</code>/<code>fork</code>/<code>vfork</code> -&gt; <code>_do_fork</code> -&gt; <code>copy_process</code> -&gt; <code>dup_task_struct</code></p>
+<p>该函数的实现简单来说分为如下步骤：</p>
+<ol>
+<li>为新的<code>task_struct</code>结构体分配内存</li>
+<li>分配栈空间</li>
+<li>将当前进程的<code>task_struct</code>结构体各个字段赋值给子进程的<code>task_struct</code>（使用<code>*dst = *src</code>）</li>
+<li>将新的栈空间赋值给子进程的<code>task_struct-&gt;stack</code>。</li>
+</ol>
+<p>为什么子进程的<code>task_struct</code>结构体被分配了新的内存，却还能在设置了<code>CLONE_FS</code>后与父进程共享<code>task_struct-&gt;fs</code>？<br>因为<code>task_struct</code>中，<code>fs</code>的数据类型是<code>struct fs_struct *</code>，所以两个<code>fs</code>实际上指向同一块内存区域。</p>
+
+  </div>
+  <div class="post-meta">
+    <span class="post-time" style="color:#646060;font-size:13px">2020-06-18</span>
+  </div>
+
+  <div class="post-footer">
+    
+
+    <a href="#top" class="top">Back to Top</a>
+  </div>
+</article>
+
+<!-- 评论插件 -->
+
+    <div id="gitalk-container"></div>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+    <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+    <script>
+    var gitalk = new Gitalk({
+        id: 'CLONE_FS标志对子进程文件系统的影响',
+        owner: 'tiehichi',
+        admin: ['tiehichi'],
+        repo: 'tiehichi.github.io',
+        clientID: 'bf2f550864240e94ca3f',
+        clientSecret: 'a03922278132bc805aa4a44d72e5250166095dbe',
+    })
+    gitalk.render('gitalk-container')
+    </script>
+
+
+<!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "8076240da6a9474eb806a2772561d84a"}'></script><!-- End Cloudflare Web Analytics -->
+<footer>
+  2022
+  <span class="author">
+    Tiehichi
+  </span>
+</footer>
+
+
+    </div>
+  </body>
+</html>

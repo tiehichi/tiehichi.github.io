@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+  
+  <title>减小Docker镜像的体积 - Tiehichi&#39;s Blog</title>
+  <link rel="icon" href="https://imgur.com/pPCZVX8.png" type="image/x-icon">
+  <link href="https://fonts.googleapis.com/css?family=Bungee+Inline|Noto+Sans+SC|Ubuntu+Mono&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  
+  <meta name="keywords" content=>
+  
+  
+  
+    <link rel="alternate" href="/atom.xml " title="Tiehichi&#39;s Blog" type="application/atom+xml">
+  
+
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+
+  <body>
+    <div class="container">
+      <header class="header">
+  <div class="blog-title">
+    <a href="/" class="logo">Tiehichi&#39;s Blog</a>
+    <div class="subtitle"></div>
+  </div>
+  <nav class="navbar">
+    <ul class="menu">
+      
+        <li class="menu-item">
+          <a href="/" class="menu-item-link">Home</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/categories" class="menu-item-link">Categories</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/about" class="menu-item-link">About</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/atom.xml" class="menu-item-link">RSS</a>
+        </li>
+      
+    </ul>
+  </nav>
+</header>
+<script>
+  var link="";
+  var a = document.getElementsByTagName('img');
+  for(i=0;i<a.length;i++){
+    a[i].referrerPolicy='no-referrer';
+    link = a[i].src;
+    a[i].src = link+'?t='+Math.random();
+  }
+</script>
+
+<article class="post">
+  <div class="post-title">
+    <h1 class="article-title">减小Docker镜像的体积</h1>
+  </div>
+
+  <!-- 文章目录 -->
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#分析"><span class="toc-text">分析</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#优化"><span class="toc-text">优化</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#合并层级"><span class="toc-text">合并层级</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#利用Docker的多阶段构建进行压缩"><span class="toc-text">利用Docker的多阶段构建进行压缩</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#使用distroless"><span class="toc-text">使用distroless</span></a></li></ol></li></ol>
+
+  <div class="post-content">
+    <p>在构建用于<code>高通sectools</code>签名工具的<code>Docker</code>镜像时，发现一个问题：我基于<code>alpine 3.2</code>构建的镜像，居然比同事基于<code>ubuntu 16.04</code>构建的镜像体积更大，感觉没什么道理</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">secboot			dev			fcb2114cfdb8		13 seconds ago		241MB        <span class="comment"># 我的</span></span><br><span class="line">ubuntu			secboot		4e637fb3bcc5		19 hours ago		186MB        <span class="comment"># 同事的</span></span><br></pre></td></tr></table></figure>
+
+<p><code>Dockerfile</code>长这样</p>
+<figure class="highlight dockerfile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">FROM</span> alpine:<span class="number">3.2</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">RUN</span><span class="bash"> sed -i <span class="string">'s/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g'</span> /etc/apk/repositories &amp;&amp; \</span></span><br><span class="line"><span class="bash">    apk add --no-cache \</span></span><br><span class="line"><span class="bash">    python \</span></span><br><span class="line"><span class="bash">    openssl \</span></span><br><span class="line"><span class="bash">    squashfs-tools \</span></span><br><span class="line"><span class="bash">    cryptsetup \</span></span><br><span class="line"><span class="bash">    fakeroot \</span></span><br><span class="line"><span class="bash">    libxml2-utils \</span></span><br><span class="line"><span class="bash">    lzo \</span></span><br><span class="line"><span class="bash">    bash</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">RUN</span><span class="bash"> apk add --no-cache --virtual .build-deps \</span></span><br><span class="line"><span class="bash">    git \</span></span><br><span class="line"><span class="bash">    make \</span></span><br><span class="line"><span class="bash">    python-dev \</span></span><br><span class="line"><span class="bash">    py-pip \</span></span><br><span class="line"><span class="bash">    lzo-dev \</span></span><br><span class="line"><span class="bash">    gcc \</span></span><br><span class="line"><span class="bash">    libc-dev \</span></span><br><span class="line"><span class="bash">    autoconf \</span></span><br><span class="line"><span class="bash">    automake \</span></span><br><span class="line"><span class="bash">    pkgconf \</span></span><br><span class="line"><span class="bash">    libtool \</span></span><br><span class="line"><span class="bash">    util-linux-dev \</span></span><br><span class="line"><span class="bash">    zlib-dev \</span></span><br><span class="line"><span class="bash">    linux-headers</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">RUN</span><span class="bash"> <span class="built_in">cd</span> /root &amp;&amp; \</span></span><br><span class="line"><span class="bash">    git <span class="built_in">clone</span> git://git.infradead.org/mtd-utils.git &amp;&amp; \</span></span><br><span class="line"><span class="bash">    <span class="built_in">cd</span> mtd-utils &amp;&amp; git checkout v2.0.2 &amp;&amp; \</span></span><br><span class="line"><span class="bash">    ./autogen.sh &amp;&amp; ./configure &amp;&amp; make &amp;&amp; make install &amp;&amp; \</span></span><br><span class="line"><span class="bash">    <span class="built_in">cd</span> /root &amp;&amp; rm -rf mtd-utils &amp;&amp; \</span></span><br><span class="line"><span class="bash">    pip install python-lzo</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">RUN</span><span class="bash"> apk del .build-deps</span></span><br><span class="line"><span class="keyword">WORKDIR</span><span class="bash"> /root</span></span><br><span class="line"><span class="keyword">CMD</span><span class="bash"> [<span class="string">"/bin/bash"</span>]</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h2><p>为了找出镜像过大的原因，我开始一段一段的<code>build</code>，测试镜像的大小，终于在最后一个<code>RUN</code>的位置发现了问题<br>这是运行<code>apk del .build-deps</code>前后的镜像大小</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">secboot		dev		53016ef2a6c6        34 minutes ago      240MB        <span class="comment"># apk del之前</span></span><br><span class="line">secboot		dev		fcb2114cfdb8        35 minutes ago      241MB        <span class="comment"># apk del之后</span></span><br></pre></td></tr></table></figure>
+
+<p>我确认上面的注释不是我写错了，而是确实<code>apk del</code>之后镜像比之前还大了<code>1M</code>；仔细思考之后，我觉得应该是镜像分层造成的最终镜像过大。</p>
+<p>查询之后发现有个命令可以查看<code>Docker</code>镜像的分层情况</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker <span class="built_in">history</span> &lt;repository&gt;:&lt;tag&gt;</span><br></pre></td></tr></table></figure>
+
+<p>查看<code>secboot:dev</code>镜像的分层结果如下</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">IMAGE			CREATED			CREATED BY                                      SIZE</span><br><span class="line">0362b4c01d3d	4 seconds ago	/bin/sh -c <span class="comment">#(nop)  CMD ["/bin/bash"]            0B</span></span><br><span class="line">021384a78602    4 seconds ago   /bin/sh -c <span class="comment">#(nop) WORKDIR /root                 0B</span></span><br><span class="line">e3cc8dc505b8    4 seconds ago   /bin/sh -c apk del .build-deps                  167kB</span><br><span class="line">18bba3b26848    6 seconds ago   /bin/sh -c <span class="built_in">cd</span> /root &amp;&amp;     git <span class="built_in">clone</span> git://g…   2.86MB</span><br><span class="line">412c22750681	2 minutes ago   /bin/sh -c apk add --no-cache --virtual .bui…   192MB</span><br><span class="line">84a93104b094	3 minutes ago	/bin/sh -c sed -i <span class="string">'s/dl-cdn.alpinelinux.org/…   40.6MB</span></span><br><span class="line"><span class="string">98f5f2d17bd1	8 months ago    /bin/sh -c #(nop)  CMD ["/bin/sh"]              0B</span></span><br><span class="line"><span class="string">&lt;missing&gt;		8 months ago	/bin/sh -c #(nop) ADD file:3b4be7a9f665764de…   5.27MB</span></span><br></pre></td></tr></table></figure>
+
+<p>从分层结果可以看到，第五个层占用了<code>192M</code>的空间，其对应<code>Dockerfile</code>中的命令应该是<code>apk add --no-cache --virtual .build-deps</code>命令；所以镜像过大的原因应该是<code>apk del .build-deps</code>只在第三层中卸载了软件包并叠加在第四层上，而第五层安装的软件包仍然存在。</p>
+<h2 id="优化"><a href="#优化" class="headerlink" title="优化"></a>优化</h2><h3 id="合并层级"><a href="#合并层级" class="headerlink" title="合并层级"></a>合并层级</h3><p>最简单的优化方法当然是将<code>apk add --no-cache --virtual .build-deps</code>到<code>apk del .build-deps</code>合并到一个层中，这样安装软件包的时候不会创建新的层级，使用完后卸载软件包，也不会使改层级占用过大的空间。</p>
+<figure class="highlight dockerfile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">RUN</span><span class="bash"> apk add --no-cache --virtual .build-deps \</span></span><br><span class="line"><span class="bash">    git \</span></span><br><span class="line"><span class="bash">    make \</span></span><br><span class="line"><span class="bash">    python-dev \</span></span><br><span class="line"><span class="bash">    py-pip \</span></span><br><span class="line"><span class="bash">    lzo-dev \</span></span><br><span class="line"><span class="bash">    gcc \</span></span><br><span class="line"><span class="bash">    libc-dev \</span></span><br><span class="line"><span class="bash">    autoconf \</span></span><br><span class="line"><span class="bash">    automake \</span></span><br><span class="line"><span class="bash">    pkgconf \</span></span><br><span class="line"><span class="bash">    libtool \</span></span><br><span class="line"><span class="bash">    util-linux-dev \</span></span><br><span class="line"><span class="bash">    zlib-dev \</span></span><br><span class="line"><span class="bash">    linux-headers \</span></span><br><span class="line"><span class="bash">    &amp;&amp; \</span></span><br><span class="line"><span class="bash">	<span class="built_in">cd</span> /root &amp;&amp; \</span></span><br><span class="line"><span class="bash">    git <span class="built_in">clone</span> git://git.infradead.org/mtd-utils.git &amp;&amp; \</span></span><br><span class="line"><span class="bash">    <span class="built_in">cd</span> mtd-utils &amp;&amp; git checkout v2.0.2 &amp;&amp; \</span></span><br><span class="line"><span class="bash">    ./autogen.sh &amp;&amp; ./configure &amp;&amp; make &amp;&amp; make install &amp;&amp; \</span></span><br><span class="line"><span class="bash">    <span class="built_in">cd</span> /root &amp;&amp; rm -rf mtd-utils &amp;&amp; \</span></span><br><span class="line"><span class="bash">    pip install python-lzo \</span></span><br><span class="line"><span class="bash">    &amp;&amp; \</span></span><br><span class="line"><span class="bash">    apk del .build-deps</span></span><br></pre></td></tr></table></figure>
+
+<p>再次<code>build</code>查看分层情况</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">IMAGE         CREATED              CREATED BY                                      SIZE</span><br><span class="line">9ab88d516323  About a minute ago   /bin/sh -c <span class="comment">#(nop)  CMD ["/bin/bash"]            0B</span></span><br><span class="line">10ce23bc619c  About a minute ago   /bin/sh -c <span class="comment">#(nop) WORKDIR /root                 0B</span></span><br><span class="line">197866cc1784  About a minute ago   /bin/sh -c apk add --no-cache --virtual .bui…   3.32MB</span><br><span class="line">84a93104b094  30 minutes ago       /bin/sh -c sed -i <span class="string">'s/dl-cdn.alpinelinux.org/…   40.6MB</span></span><br><span class="line"><span class="string">98f5f2d17bd1  8 months ago         /bin/sh -c #(nop)  CMD ["/bin/sh"]              0B</span></span><br><span class="line"><span class="string">&lt;missing&gt;	  8 months ago         /bin/sh -c #(nop) ADD file:3b4be7a9f665764de…   5.27MB</span></span><br></pre></td></tr></table></figure>
+
+<p>可以看到刚才占了<code>192M</code>空间的<code>IMAGE</code>没了，刚才的3、4、5层合并成现在的第三层，仅仅占用了<code>3.32M</code>的空间，镜像的最终大小也降至<code>49M</code>。</p>
+<h3 id="利用Docker的多阶段构建进行压缩"><a href="#利用Docker的多阶段构建进行压缩" class="headerlink" title="利用Docker的多阶段构建进行压缩"></a>利用Docker的多阶段构建进行压缩</h3><p><code>Docker</code>的多阶段构建类似于这样</p>
+<figure class="highlight dockerfile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">FROM</span> node:<span class="number">8</span> as build</span><br><span class="line"><span class="keyword">WORKDIR</span><span class="bash"> /app</span></span><br><span class="line"><span class="keyword">COPY</span><span class="bash"> package.json index.js ./</span></span><br><span class="line"><span class="keyword">RUN</span><span class="bash"> npm install</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">FROM</span> node:<span class="number">8</span></span><br><span class="line"><span class="keyword">COPY</span><span class="bash"> --from=build /app /</span></span><br><span class="line"><span class="keyword">EXPOSE</span> <span class="number">3000</span></span><br><span class="line"><span class="keyword">CMD</span><span class="bash"> [<span class="string">"index.js"</span>]</span></span><br></pre></td></tr></table></figure>
+
+<p>二阶段构建时将前一阶段的构建结果拷贝到当前镜像中，相当于将前一阶段的结果<code>merge</code>到当前阶段的构建当中。</p>
+<p><img src="https://s3.amazonaws.com/infoq.content.live.0/articles/3-simple-tricks-for-smaller-docker-images/zh/resources/92-1535708975704.gif" alt=""></p>
+<p>对于我当前的<code>Dockerfile</code>，要通过多阶段编译来缩小镜像，需要调整一下执行顺序，让编译<code>mtd-utils</code>的过程作为一阶段构建，二阶段构建直接使用前一阶段的结果。</p>
+<figure class="highlight dockerfile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">FROM</span> alpine:<span class="number">3.2</span> as build_mtd_utils</span><br><span class="line"></span><br><span class="line"><span class="keyword">RUN</span><span class="bash"> sed -i <span class="string">'s/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g'</span> /etc/apk/repositories &amp;&amp; \</span></span><br><span class="line"><span class="bash">    apk add --no-cache python &amp;&amp; \</span></span><br><span class="line"><span class="bash">    apk add --no-cache --virtual .build-deps \</span></span><br><span class="line"><span class="bash">    git \</span></span><br><span class="line"><span class="bash">    make \</span></span><br><span class="line"><span class="bash">    python-dev \</span></span><br><span class="line"><span class="bash">    py-pip \</span></span><br><span class="line"><span class="bash">    lzo-dev \</span></span><br><span class="line"><span class="bash">    gcc \</span></span><br><span class="line"><span class="bash">    libc-dev \</span></span><br><span class="line"><span class="bash">    autoconf \</span></span><br><span class="line"><span class="bash">    automake \</span></span><br><span class="line"><span class="bash">    pkgconf \</span></span><br><span class="line"><span class="bash">    libtool \</span></span><br><span class="line"><span class="bash">    util-linux-dev \</span></span><br><span class="line"><span class="bash">    zlib-dev \</span></span><br><span class="line"><span class="bash">    linux-headers</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">RUN</span><span class="bash"> <span class="built_in">cd</span> /root &amp;&amp; \</span></span><br><span class="line"><span class="bash">    git <span class="built_in">clone</span> git://git.infradead.org/mtd-utils.git &amp;&amp; \</span></span><br><span class="line"><span class="bash">    <span class="built_in">cd</span> mtd-utils &amp;&amp; git checkout v2.0.2 &amp;&amp; \</span></span><br><span class="line"><span class="bash">    ./autogen.sh &amp;&amp; ./configure &amp;&amp; make &amp;&amp; make install &amp;&amp; \</span></span><br><span class="line"><span class="bash">    <span class="built_in">cd</span> /root &amp;&amp; rm -rf mtd-utils &amp;&amp; \</span></span><br><span class="line"><span class="bash">    pip install python-lzo</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">RUN</span><span class="bash"> apk del .build-deps</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">FROM</span> alpine:<span class="number">3.2</span></span><br><span class="line"><span class="keyword">COPY</span><span class="bash"> --from=build_mtd_utils / /</span></span><br><span class="line"><span class="keyword">RUN</span><span class="bash"> apk add --no-cache \</span></span><br><span class="line"><span class="bash">    openssl \</span></span><br><span class="line"><span class="bash">    squashfs-tools \</span></span><br><span class="line"><span class="bash">    cryptsetup \</span></span><br><span class="line"><span class="bash">    fakeroot \</span></span><br><span class="line"><span class="bash">    libxml2-utils \</span></span><br><span class="line"><span class="bash">    lzo \</span></span><br><span class="line"><span class="bash">    bash</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">WORKDIR</span><span class="bash"> /root</span></span><br><span class="line"><span class="keyword">CMD</span><span class="bash"> [<span class="string">"/bin/bash"</span>]</span></span><br></pre></td></tr></table></figure>
+
+<p>看看编译后的分层情况</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">IMAGE			CREATED			CREATED BY                                      SIZE</span><br><span class="line">3d27fb3a9c4c	30 seconds ago	/bin/sh -c <span class="comment">#(nop)  CMD ["/bin/bash"]			0B</span></span><br><span class="line">dd3f19eac44d	30 seconds ago	/bin/sh -c <span class="comment">#(nop) WORKDIR /root					0B</span></span><br><span class="line">155f84cb7918	30 seconds ago	/bin/sh -c apk add --no-cache     openssl   …   4.21MB</span><br><span class="line">d166bc1eb44c	39 seconds ago	/bin/sh -c <span class="comment">#(nop) COPY dir:c1b109c276e386ad4…   44.9MB</span></span><br><span class="line">98f5f2d17bd1	8 months ago	/bin/sh -c <span class="comment">#(nop)  CMD ["/bin/sh"]              0B</span></span><br><span class="line">&lt;missing&gt;		8 months ago	/bin/sh -c <span class="comment">#(nop) ADD file:3b4be7a9f665764de…   5.27MB</span></span><br></pre></td></tr></table></figure>
+
+<p>第四层的<code>COPY</code>就是使用了前一阶段的构建结果；这种构建方式最终镜像的大小会比前面合并层级的方式稍大，原因是第四层在使用前一阶段构建结果时，已经包含了基础镜像的大小，所以第六层的基础镜像层就多了出来。</p>
+<p>除了镜像稍大之外，这种构建方式还会创建一个多余的匿名镜像</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">-&gt; % docker images</span><br><span class="line">REPOSITORY          TAG                 IMAGE ID            CREATED              SIZE</span><br><span class="line">secboot             dev                 3d27fb3a9c4c        About a minute ago   54.4MB</span><br><span class="line">&lt;none&gt;              &lt;none&gt;              3449aa1a3034        About a minute ago   238MB</span><br></pre></td></tr></table></figure>
+
+<p>可以看到<code>secboot:dev</code>镜像比前面合并层级的优化方式多了<code>5M</code>，并且多出了一个<code>238M</code>的匿名镜像；这个镜像这么大的原因仍然是我将<code>apk add</code>和<code>apk del</code>放在两个层级中。</p>
+<h3 id="使用distroless"><a href="#使用distroless" class="headerlink" title="使用distroless"></a>使用<code>distroless</code></h3><p>待调研</p>
+
+  </div>
+  <div class="post-meta">
+    <span class="post-time" style="color:#646060;font-size:13px">2019-10-13</span>
+  </div>
+
+  <div class="post-footer">
+    
+
+    <a href="#top" class="top">Back to Top</a>
+  </div>
+</article>
+
+<!-- 评论插件 -->
+
+    <div id="gitalk-container"></div>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+    <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+    <script>
+    var gitalk = new Gitalk({
+        id: '减小Docker镜像的体积',
+        owner: 'tiehichi',
+        admin: ['tiehichi'],
+        repo: 'tiehichi.github.io',
+        clientID: 'bf2f550864240e94ca3f',
+        clientSecret: 'a03922278132bc805aa4a44d72e5250166095dbe',
+    })
+    gitalk.render('gitalk-container')
+    </script>
+
+
+<!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "8076240da6a9474eb806a2772561d84a"}'></script><!-- End Cloudflare Web Analytics -->
+<footer>
+  2022
+  <span class="author">
+    Tiehichi
+  </span>
+</footer>
+
+
+    </div>
+  </body>
+</html>

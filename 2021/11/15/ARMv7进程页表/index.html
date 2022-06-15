@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+  
+  <title>ARMv7进程页表 - Tiehichi&#39;s Blog</title>
+  <link rel="icon" href="https://imgur.com/pPCZVX8.png" type="image/x-icon">
+  <link href="https://fonts.googleapis.com/css?family=Bungee+Inline|Noto+Sans+SC|Ubuntu+Mono&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  
+  <meta name="keywords" content=>
+  
+  
+  
+    <link rel="alternate" href="/atom.xml " title="Tiehichi&#39;s Blog" type="application/atom+xml">
+  
+
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+
+  <body>
+    <div class="container">
+      <header class="header">
+  <div class="blog-title">
+    <a href="/" class="logo">Tiehichi&#39;s Blog</a>
+    <div class="subtitle"></div>
+  </div>
+  <nav class="navbar">
+    <ul class="menu">
+      
+        <li class="menu-item">
+          <a href="/" class="menu-item-link">Home</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/categories" class="menu-item-link">Categories</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/about" class="menu-item-link">About</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/atom.xml" class="menu-item-link">RSS</a>
+        </li>
+      
+    </ul>
+  </nav>
+</header>
+<script>
+  var link="";
+  var a = document.getElementsByTagName('img');
+  for(i=0;i<a.length;i++){
+    a[i].referrerPolicy='no-referrer';
+    link = a[i].src;
+    a[i].src = link+'?t='+Math.random();
+  }
+</script>
+
+<article class="post">
+  <div class="post-title">
+    <h1 class="article-title">ARMv7进程页表</h1>
+  </div>
+
+  <!-- 文章目录 -->
+  
+
+  <div class="post-content">
+    <p><code>Linux</code>每个进程有独立的页表，函数调用路径：<code>_do_fork</code> -&gt; <code>copy_process</code> -&gt; <code>copy_mm</code> -&gt; <code>dup_mm</code> -&gt; <code>mm_alloc_pgd</code> -&gt; <code>pgd_alloc</code>。<code>pgd_alloc()</code>的实现与平台相关，对于arm32平台，其实现位于<code>arch/arm/mm/pgd.c</code>中：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * need to get a 16k page for level 1</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">pgd_t</span> *pgd_alloc(struct mm_struct *mm)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">pgd_t</span> *new_pgd, *init_pgd;</span><br><span class="line">    <span class="keyword">pud_t</span> *new_pud, *init_pud;</span><br><span class="line">    <span class="keyword">pmd_t</span> *new_pmd, *init_pmd;</span><br><span class="line">    <span class="keyword">pte_t</span> *new_pte, *init_pte;</span><br><span class="line"></span><br><span class="line">    new_pgd = __pgd_alloc();</span><br><span class="line">    <span class="keyword">if</span> (!new_pgd)</span><br><span class="line">        <span class="keyword">goto</span> no_pgd;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">memset</span>(new_pgd, <span class="number">0</span>, USER_PTRS_PER_PGD * <span class="keyword">sizeof</span>(<span class="keyword">pgd_t</span>));</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">    * Copy over the kernel and IO PGD entries</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    init_pgd = pgd_offset_k(<span class="number">0</span>);</span><br><span class="line">    <span class="built_in">memcpy</span>(new_pgd + USER_PTRS_PER_PGD, init_pgd + USER_PTRS_PER_PGD,</span><br><span class="line">               (PTRS_PER_PGD - USER_PTRS_PER_PGD) * <span class="keyword">sizeof</span>(<span class="keyword">pgd_t</span>));</span><br><span class="line"></span><br><span class="line">    clean_dcache_area(new_pgd, PTRS_PER_PGD * <span class="keyword">sizeof</span>(<span class="keyword">pgd_t</span>));</span><br><span class="line"></span><br><span class="line">......</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>进程的全局页表使用<code>__pgd_alloc</code>分配，共分配4个页16k大小：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> __pgd_alloc()	(pgd_t *)__get_free_pages(GFP_KERNEL, 2)</span></span><br></pre></td></tr></table></figure>
+
+<p>然后使用<code>memset</code>将分配的内存置0，但是这里置0的内存大小为<code>USER_PTRS_PER_PGD * sizeof(pgd_t)</code>，而<code>USER_PTRS_PER_PGD</code>为<code>TASK_SIZE/PGDIR_SIZE</code>，<code>TASK_SIZE</code>我们知道是用户虚拟地址空间大小，所以<code>USER_PTRS_PER_PGD</code>实际上是用户虚拟地址空间需要占用多少条pgd项，既<code>memset</code>置0的部分刚好用来映射用户虚拟地址空间。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> USER_PTRS_PER_PGD	(TASK_SIZE / PGDIR_SIZE)</span></span><br></pre></td></tr></table></figure>
+
+<p>接下来的<code>pgd_offset_k(0)</code>是从<code>init_mm</code>中获取pgd的地址，实际上就是<code>swapper_pg_dir</code>，然后从<code>swapper_pg_dir</code>中将内核虚拟地址映射表复制到刚申请的pgd中。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* to find an entry in a kernel page-table-directory */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> pgd_offset_k(addr)	pgd_offset(&amp;init_mm, addr)</span></span><br></pre></td></tr></table></figure>
+
+<p>这部分代码可以说明，每个进程有自己的pgd，pgd中包含了用户虚拟地址空间映射和内核虚拟地址空间映射，不同进程的内核虚拟地址空间映射是相同的，在arm32上都是从<code>swapper_pg_dir</code>复制过来的。<br>对比arm64平台的<code>pgd_alloc</code>实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">pgd_t</span> *pgd_alloc(struct mm_struct *mm)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span> (PGD_SIZE == PAGE_SIZE)</span><br><span class="line">        <span class="keyword">return</span> (<span class="keyword">pgd_t</span> *)__get_free_page(PGALLOC_GFP);</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">        <span class="keyword">return</span> kmem_cache_alloc(pgd_cache, PGALLOC_GFP);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>可见arm64中并没有从<code>swapper_pg_dir</code>中拷贝内核虚拟地址映射的步骤，这是因为arm64上linux进程用户地址空间和内核地址空间都是256TB，Linux内核会配置使用<code>TTBR0</code>和<code>TTBR1</code>寄存器，<code>TTBR0</code>存放用户pgd的基址，<code>TTBR1</code>存放内核pgd的基址，MMU根据传入的虚拟地址来选择使用<code>TTBR0</code>还是<code>TTBR1</code>寄存器。</p>
+<p>arm32平台同样具有<code>TTBR0</code>和<code>TTBR1</code>两个全局页表基址寄存器，但Linux内核并没有使用<code>TTBR1</code>，这是因为arm32对用户虚拟地址空间与内核虚拟地址空间的分割无法满足Linux内核的需求。</p>
+<p>ARMv7虚拟地址映射支持长描述符和短描述符两种形式，Linux内核使用短描述符形式，两级页表：</p>
+<p><img src="https://cdn.nlark.com/yuque/0/2021/png/1679957/1636945934322-7288573e-8f01-4b42-833c-039211d6e225.png#clientId=u0ab16135-8a44-4&from=paste&id=u5ac204a8&margin=%5Bobject%20Object%5D&name=image.png&originHeight=505&originWidth=970&originalType=url&ratio=1&size=68107&status=done&style=none&taskId=udbdaa2a9-1d19-42fc-a12c-ab82321af7f" alt="image.png"></p>
+<p><code>TTBR</code>为一级页表基地址寄存器，ARMv7有<code>TTBR0</code>和<code>TTBR1</code>两个页表基址寄存器，可以满足全局页表切换的需要；但是Linux内核虚拟地址空间分配为用户空间3G，内核空间1G，内核虚拟起始地址为<code>0xC0000000</code>；根据ARM手册的描述，<code>TTBR0</code>和<code>TTBR1</code>的切换规则为：<code>TTBCR</code>寄存器值为N，取值范围0-7，如果N为0，则使用<code>TTBR0</code>；如果N&gt;0，虚拟地址第<code>[31:32-N]</code>位均为0，则使用<code>TTBR0</code>，否则使用<code>TTBR1</code>。满足使用<code>TTBR1</code>的最小N值为1，这时<code>TTBR1</code>的虚拟地址范围为<code>0x80000000-0xFFFFFFFF</code>，因此Linux内核不使用<code>TTBR1</code>寄存器。</p>
+<p>在不使用<code>TTRB1</code>的情况下，有两种方式可以满足Linux平台的需求，既每个进程有独立的用户虚拟地址映射和相同的内核虚拟地址映射：一是进程进入内核态时，修改<code>TTBR0</code>来切换页表；另一种方法是创建进程时将内核虚拟地址映射复制到进程的全局页表中。根据前面的分析，Linux内核选择了第二种方式，这是基于性能考虑，通过修改<code>TTBR0</code>来切换页表，每次陷入内核态都需要进行页表地址的切换，非常影响性能；而复制页表项的方式仅需在进程创建时完成，不影响进程运行过程中的性能。</p>
+
+  </div>
+  <div class="post-meta">
+    <span class="post-time" style="color:#646060;font-size:13px">2021-11-15</span>
+  </div>
+
+  <div class="post-footer">
+    
+
+    <a href="#top" class="top">Back to Top</a>
+  </div>
+</article>
+
+<!-- 评论插件 -->
+
+    <div id="gitalk-container"></div>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+    <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+    <script>
+    var gitalk = new Gitalk({
+        id: 'ARMv7进程页表',
+        owner: 'tiehichi',
+        admin: ['tiehichi'],
+        repo: 'tiehichi.github.io',
+        clientID: 'bf2f550864240e94ca3f',
+        clientSecret: 'a03922278132bc805aa4a44d72e5250166095dbe',
+    })
+    gitalk.render('gitalk-container')
+    </script>
+
+
+<!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "8076240da6a9474eb806a2772561d84a"}'></script><!-- End Cloudflare Web Analytics -->
+<footer>
+  2022
+  <span class="author">
+    Tiehichi
+  </span>
+</footer>
+
+
+    </div>
+  </body>
+</html>

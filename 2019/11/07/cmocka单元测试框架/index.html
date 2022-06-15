@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+  
+  <title>cmocka单元测试框架 - Tiehichi&#39;s Blog</title>
+  <link rel="icon" href="https://imgur.com/pPCZVX8.png" type="image/x-icon">
+  <link href="https://fonts.googleapis.com/css?family=Bungee+Inline|Noto+Sans+SC|Ubuntu+Mono&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  
+  <meta name="keywords" content=>
+  
+  
+  
+    <link rel="alternate" href="/atom.xml " title="Tiehichi&#39;s Blog" type="application/atom+xml">
+  
+
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+
+  <body>
+    <div class="container">
+      <header class="header">
+  <div class="blog-title">
+    <a href="/" class="logo">Tiehichi&#39;s Blog</a>
+    <div class="subtitle"></div>
+  </div>
+  <nav class="navbar">
+    <ul class="menu">
+      
+        <li class="menu-item">
+          <a href="/" class="menu-item-link">Home</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/categories" class="menu-item-link">Categories</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/about" class="menu-item-link">About</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/atom.xml" class="menu-item-link">RSS</a>
+        </li>
+      
+    </ul>
+  </nav>
+</header>
+<script>
+  var link="";
+  var a = document.getElementsByTagName('img');
+  for(i=0;i<a.length;i++){
+    a[i].referrerPolicy='no-referrer';
+    link = a[i].src;
+    a[i].src = link+'?t='+Math.random();
+  }
+</script>
+
+<article class="post">
+  <div class="post-title">
+    <h1 class="article-title">cmocka单元测试框架</h1>
+  </div>
+
+  <!-- 文章目录 -->
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#下载和编译"><span class="toc-text">下载和编译</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#示例"><span class="toc-text">示例</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#测试用法"><span class="toc-text">测试用法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#mock用法"><span class="toc-text">mock用法</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#生成测试报告"><span class="toc-text">生成测试报告</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#生成覆盖率报告"><span class="toc-text">生成覆盖率报告</span></a></li></ol>
+
+  <div class="post-content">
+    <p><code>cmocka</code>是一个C语言的单元测试框架，仅依赖标准库，可以在多种平台多种编译器上使用。</p>
+<p><code>cmocka</code>官网为<a href="https://cmocka.org/" target="_blank" rel="noopener">https://cmocka.org/</a></p>
+<h2 id="下载和编译"><a href="#下载和编译" class="headerlink" title="下载和编译"></a>下载和编译</h2><p><code>cmocka</code>的源码托管在<a href="https://gitlab.com/cmocka/cmocka" target="_blank" rel="noopener">GitLab</a>上，编译系统使用<code>CMake</code></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://gitlab.com/cmocka/cmocka.git</span><br><span class="line"><span class="built_in">cd</span> cmocka</span><br><span class="line">mkdir build &amp;&amp; <span class="built_in">cd</span> build</span><br><span class="line">cmake .. &amp;&amp; make</span><br></pre></td></tr></table></figure>
+
+<h2 id="示例"><a href="#示例" class="headerlink" title="示例"></a>示例</h2><p><code>cmocka</code>使用示例位于源码目录下的<code>example</code>文件夹中，<code>example</code>中演示了<code>assert_macro</code>、<code>assert_module</code>、<code>allocate_module</code>和<code>mock</code>的使用。</p>
+<h3 id="测试用法"><a href="#测试用法" class="headerlink" title="测试用法"></a>测试用法</h3><ol>
+<li><p><code>simple_test</code></p>
+<p><code>simple_test.c</code>演示了<code>cmocka</code>最简单的使用方法。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdarg.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stddef.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;setjmp.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdint.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;cmocka.h&gt;		// include cmocka header</span></span></span><br><span class="line"></span><br><span class="line"><span class="comment">// test case, do nothing</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">null_test_success</span><span class="params">(<span class="keyword">void</span> **state)</span> </span>&#123;</span><br><span class="line">    (<span class="keyword">void</span>) state; <span class="comment">/* unused */</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">void</span>)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">const</span> <span class="class"><span class="keyword">struct</span> <span class="title">CMUnitTest</span> <span class="title">tests</span>[] = &#123;</span></span><br><span class="line">        cmocka_unit_test(null_test_success),</span><br><span class="line">    &#125;;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> cmocka_run_group_tests(tests, <span class="literal">NULL</span>, <span class="literal">NULL</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p><code>allocate_module_test</code></p>
+<p>该例子演示了<code>allocate</code>检测功能的使用， 对应的源码为<code>example/allocate_module.c</code>和<code>example/allocate_module_test.c</code>，其中<code>allocate_module.c</code>是待测试模块。</p>
+<p>根据源码分析，为了使用<code>memory check</code>功能，需要修改待测模块的源码</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> UNIT_TESTING</span></span><br><span class="line"><span class="keyword">extern</span> <span class="keyword">void</span>* _test_malloc(<span class="keyword">const</span> <span class="keyword">size_t</span> <span class="built_in">size</span>, <span class="keyword">const</span> <span class="keyword">char</span>* file, <span class="keyword">const</span> <span class="keyword">int</span> <span class="built_in">line</span>);</span><br><span class="line"><span class="keyword">extern</span> <span class="keyword">void</span>* _test_calloc(<span class="keyword">const</span> <span class="keyword">size_t</span> number_of_elements, <span class="keyword">const</span> <span class="keyword">size_t</span> <span class="built_in">size</span>,</span><br><span class="line">                          <span class="keyword">const</span> <span class="keyword">char</span>* file, <span class="keyword">const</span> <span class="keyword">int</span> <span class="built_in">line</span>);</span><br><span class="line"><span class="keyword">extern</span> <span class="keyword">void</span> _test_free(<span class="keyword">void</span>* <span class="keyword">const</span> ptr, <span class="keyword">const</span> <span class="keyword">char</span>* file, <span class="keyword">const</span> <span class="keyword">int</span> <span class="built_in">line</span>);</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> malloc(size) _test_malloc(size, __FILE__, __LINE__)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> calloc(num, size) _test_calloc(num, size, __FILE__, __LINE__)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> free(ptr) _test_free(ptr, __FILE__, __LINE__)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span> <span class="comment">// UNIT_TESTING</span></span></span><br></pre></td></tr></table></figure>
+
+<p>将代码中使用的<code>malloc</code>、<code>free</code>等函数替换成<code>cmocka</code>框架中的封装，然后在<code>test case</code>中调用待测函数</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">leak_memory_test</span><span class="params">(<span class="keyword">void</span> **state)</span> </span>&#123;</span><br><span class="line">    (<span class="keyword">void</span>) state; <span class="comment">/* unused */</span></span><br><span class="line">    leak_memory();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>示例程序中演示了检测内存泄漏、缓冲区溢出和缓冲区下溢；内存问题的检测通过替换<code>malloc</code>和<code>free</code>函数来完成，使用场景比较有限。</p>
+</li>
+<li><p><code>assert_macro_test</code></p>
+<p>该示例演示了断言宏的使用，用法非常简单，在<code>test case</code>中使用断言宏对待测试模块进行调用即可</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">get_status_code_string_test</span><span class="params">(<span class="keyword">void</span> **state)</span> </span>&#123;</span><br><span class="line">    (<span class="keyword">void</span>) state; <span class="comment">/* unused */</span></span><br><span class="line">    assert_string_equal(get_status_code_string(<span class="number">0</span>), <span class="string">"Address not found"</span>);</span><br><span class="line">    assert_string_equal(get_status_code_string(<span class="number">1</span>), <span class="string">"Connection timed out"</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">string_to_status_code_test</span><span class="params">(<span class="keyword">void</span> **state)</span> </span>&#123;</span><br><span class="line">    (<span class="keyword">void</span>) state; <span class="comment">/* unused */</span></span><br><span class="line">    assert_int_equal(string_to_status_code(<span class="string">"Address not found"</span>), <span class="number">0</span>);</span><br><span class="line">    assert_int_equal(string_to_status_code(<span class="string">"Connection timed out"</span>), <span class="number">1</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这些断言宏仅判断测试结果是否与预期相同。</p>
+</li>
+<li><p><code>assert_module_test</code></p>
+<p>在这个例子中演示了<code>assert</code>相关宏的更高级的用法：</p>
+<ul>
+<li><p><code>mock_assert</code></p>
+<p>在<code>example/assert_module.c</code>中，使用<code>mock_assert</code>宏覆盖了标准库中的<code>assert</code>宏，原因是标准库中的<code>assert</code>宏会引起进程的<code>Aborted</code>，造成无法继续执行其他<code>test case</code>，而<code>mock_assert</code>不会引起进程<code>Aborted</code>。</p>
+</li>
+<li><p><code>expect_assert_failure</code></p>
+<p>根据语义可以判断这个宏的作用是<strong><em>期望断言失败</em></strong>，即使用该宏测试的函数中发生断言失败，则该宏测试通过，否则测试失败。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 待测试函数</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">increment_value</span><span class="params">(<span class="keyword">int</span> * <span class="keyword">const</span> value)</span> </span>&#123;</span><br><span class="line">    assert(value);</span><br><span class="line">    (*value) ++;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">decrement_value</span><span class="params">(<span class="keyword">int</span> * <span class="keyword">const</span> value)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (value) &#123;</span><br><span class="line">      (*value) --;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// test case</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">increment_value_assert</span><span class="params">(<span class="keyword">void</span> **state)</span> </span>&#123;</span><br><span class="line">    (<span class="keyword">void</span>) state;</span><br><span class="line">    expect_assert_failure(increment_value(<span class="literal">NULL</span>));</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">decrement_value_fail</span><span class="params">(<span class="keyword">void</span> **state)</span> </span>&#123;</span><br><span class="line">    (<span class="keyword">void</span>) state;</span><br><span class="line">    expect_assert_failure(decrement_value(<span class="literal">NULL</span>));</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 测试结果</span></span><br><span class="line">[ RUN      ] increment_value_assert</span><br><span class="line">Expected assertion value occurred</span><br><span class="line">[       OK ] increment_value_assert</span><br><span class="line">[ RUN      ] decrement_value_fail</span><br><span class="line"><span class="function">Expected assert in <span class="title">decrement_value</span><span class="params">(<span class="literal">NULL</span>)</span></span></span><br><span class="line">[  ERROR   ] --- [   LINE   ] --- /home/noah/cmocka/example/assert_module_test.c:46: error: Failure!</span><br><span class="line">[  FAILED  ] decrement_value_fail</span><br></pre></td></tr></table></figure>
+
+</li>
+</ul>
+</li>
+</ol>
+<h3 id="mock用法"><a href="#mock用法" class="headerlink" title="mock用法"></a><code>mock</code>用法</h3><p><code>mock</code>功能的演示代码位于<code>example/mock</code>中，提供了两个示例，分别是<code>chef_wrap</code>和<code>uptime</code>。</p>
+<p><code>mock</code>功能的使用依赖于一个连接器参数：<code>--wrap=symbol</code>，如果在编译时使用，需要用<code>-Wl,--wrap=symbol</code>，使用这个参数后，当需要调用<code>symbol</code>函数时，实际上会去调用<code>__wrap_symbol</code>。</p>
+<ul>
+<li><p><code>chef_wrap</code></p>
+<p>在这个例子中，待测模块是位于<code>waiter_test_wrap.c</code>中的<code>waiter_process</code>函数，该函数中使用了<code>chef_cook</code>函数，但是根据<code>chef.c</code>中<code>chef_cook</code>函数的表述，该函数并未实现，所以需要对这个函数进行<code>mock</code>，<code>__wrap_chef_cook</code>便是该函数的<code>mock</code>。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int</span> __wrap_chef_cook(<span class="keyword">const</span> <span class="keyword">char</span> *order, <span class="keyword">char</span> **dish_out)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">bool</span> has_ingredients;</span><br><span class="line">    <span class="keyword">bool</span> knows_dish;</span><br><span class="line">    <span class="keyword">char</span> *dish;</span><br><span class="line"></span><br><span class="line">    check_expected_ptr(order);				<span class="comment">// 测试输入是否为期望值</span></span><br><span class="line"></span><br><span class="line">    knows_dish = mock_type(<span class="keyword">bool</span>);			<span class="comment">// mock knows_dish</span></span><br><span class="line">    <span class="keyword">if</span> (knows_dish == <span class="literal">false</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    has_ingredients = mock_type(<span class="keyword">bool</span>);		<span class="comment">// mock has_ingredients</span></span><br><span class="line">    <span class="keyword">if</span> (has_ingredients == <span class="literal">false</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="number">-2</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    dish = mock_ptr_type(<span class="keyword">char</span> *);			<span class="comment">// mock dish</span></span><br><span class="line">    *dish_out = strdup(dish);</span><br><span class="line">    <span class="keyword">if</span> (*dish_out == <span class="literal">NULL</span>) <span class="keyword">return</span> ENOMEM;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> mock_type(<span class="keyword">int</span>);					<span class="comment">// mock return value</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>该<code>mock</code>函数的实现中，有四处<code>mock_type</code>，这些变量的值由外部（如<code>test case</code>中）提供；<code>check_expected_ptr</code>宏用来测试变量是否为期望的值，该期望值也由外部指定。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">test_order_hotdog</span><span class="params">(<span class="keyword">void</span> **state)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> rv;</span><br><span class="line">    <span class="keyword">char</span> *dish;</span><br><span class="line">    (<span class="keyword">void</span>) state; <span class="comment">/* unused */</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">/* 指定check_expected_ptr的期望值 */</span></span><br><span class="line">    expect_string(__wrap_chef_cook, order, <span class="string">"hotdog"</span>);</span><br><span class="line"></span><br><span class="line">    will_return(__wrap_chef_cook, <span class="literal">true</span>);	<span class="comment">// mock knows_dish</span></span><br><span class="line">    will_return(__wrap_chef_cook, <span class="literal">true</span>);	<span class="comment">// mock has_ingredients</span></span><br><span class="line">    <span class="comment">/* mock dish */</span></span><br><span class="line">    will_return(__wrap_chef_cook, cast_ptr_to_largest_integral_type(<span class="string">"hotdog"</span>));</span><br><span class="line">    will_return(__wrap_chef_cook, <span class="number">0</span>);		<span class="comment">// mock return value</span></span><br><span class="line"></span><br><span class="line">    rv = waiter_process(<span class="string">"hotdog"</span>, &amp;dish);</span><br><span class="line"></span><br><span class="line">    assert_int_equal(rv, <span class="number">0</span>);</span><br><span class="line">    assert_string_equal(dish, <span class="string">"hotdog"</span>);</span><br><span class="line">    <span class="keyword">if</span> (dish != <span class="literal">NULL</span>) &#123;</span><br><span class="line">        <span class="built_in">free</span>(dish);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p><code>uptime</code></p>
+<p>该示例中编译后生成两个可执行文件，分别是<code>uptime</code>和<code>test_uptime</code>；其中<code>uptime</code>使用未被<code>mock</code>的<code>uptime</code>函数，而<code>test_uptime</code>使用<code>mock</code>的<code>uptime</code>函数。</p>
+<p>这个例子旨在演示<code>mock</code>函数的用途，以及开发过程中<code>mock</code>在进行单元测试时的作用。</p>
+</li>
+</ul>
+<h2 id="生成测试报告"><a href="#生成测试报告" class="headerlink" title="生成测试报告"></a>生成测试报告</h2><p><code>cmocka</code>生成的<code>xml</code>格式报告为<code>JUnit</code>格式。</p>
+<p>一般情况下，执行<code>cmocka</code>单元测试程序，测试结果会直接打印到<code>stderr</code>上，格式如下</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[==========] Running 2 test(s).</span><br><span class="line">[ RUN      ] test_order_hotdog</span><br><span class="line">[       OK ] test_order_hotdog</span><br><span class="line">[ RUN      ] test_bad_dish</span><br><span class="line">[       OK ] test_bad_dish</span><br><span class="line">[==========] 2 test(s) run.</span><br><span class="line">[  PASSED  ] 2 test(s).</span><br></pre></td></tr></table></figure>
+
+<p>如果需要生成<code>xml</code>格式报告，需要在代码中添加如下行</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cmocka_set_message_output(CM_OUTPUT_XML);</span><br></pre></td></tr></table></figure>
+
+<p>该行需要在<code>cmocka_run_group_tests</code>之前调用；<code>xml</code>格式输出如下</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="UTF-8" ?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">testsuites</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">testsuite</span> <span class="attr">name</span>=<span class="string">"tests"</span> <span class="attr">time</span>=<span class="string">"0.000"</span> <span class="attr">tests</span>=<span class="string">"2"</span> <span class="attr">failures</span>=<span class="string">"0"</span> <span class="attr">errors</span>=<span class="string">"0"</span> <span class="attr">skipped</span>=<span class="string">"0"</span> &gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">testcase</span> <span class="attr">name</span>=<span class="string">"test_order_hotdog"</span> <span class="attr">time</span>=<span class="string">"0.000"</span> &gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">testcase</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">testcase</span> <span class="attr">name</span>=<span class="string">"test_bad_dish"</span> <span class="attr">time</span>=<span class="string">"0.000"</span> &gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">testcase</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">testsuite</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">testsuites</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>除此之外，也可以通过设置<code>CMOCKA_MESSAGE_OUTPUT</code>环境变量修改<code>cmocka</code>的输出格式，环境变量可用的值有<code>stdout</code>、<code>subunit</code>、<code>tab</code>和 <code>xml</code>；需要注意的是，设置环境变量修改报告格式的方法优先级更高。</p>
+<p>默认情况下，<code>cmocka</code>的输出会被打印到<code>stderr</code>，如果需要存储到文件中，可以通过设置<code>CMOCKA_XML_FILE</code>环境变量的方式，如</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">CMOCKA_XML_FILE=testresults/result1.xml</span><br></pre></td></tr></table></figure>
+
+<p>如果<code>cmocka</code>无法在<code>CMOCKA_XML_FILE</code>指定的位置创建文件，则仍然会将结果输出到<code>stderr</code>。</p>
+<p>如果有多个<code>cmocka</code>测试程序需要生成报告，可以使用<code>%g</code>对文件名进行格式化</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">CMOCKA_XML_FILE=testresults/%g.xml</span><br></pre></td></tr></table></figure>
+
+<p>生成报告时，<code>%g</code>将被格式化为<code>group name</code>，即<code>cmocka_run_group_tests</code>宏的第一个参数，例如前面<code>simple_test</code>生成的报告文件名为<code>tests.xml</code>。</p>
+<h2 id="生成覆盖率报告"><a href="#生成覆盖率报告" class="headerlink" title="生成覆盖率报告"></a>生成覆盖率报告</h2><p>推荐使用<code>lcov</code>工具生成代码覆盖率报告；<code>lcov</code>依赖于<code>gcov</code>，后者是包含在<code>GNU</code>编译套件中的，只要安装了<code>GCC</code>，一般就已经包含了<code>gcov</code>工具，但是<code>lcov</code>需要单独安装；<code>Ubuntu</code>上安装方法如下</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt install lcov</span><br></pre></td></tr></table></figure>
+
+<p>为了生成代码覆盖率报告，首先需要在编译生成单元测试程序时，添加编译器和连接器参数</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 编译器参数</span></span><br><span class="line">--coverage</span><br><span class="line"></span><br><span class="line"><span class="comment"># 连接器参数</span></span><br><span class="line">--coverage -lgcov</span><br><span class="line"></span><br><span class="line"><span class="comment"># 通过GCC添加连接器参数</span></span><br><span class="line">-Wl,--coverage -lgcov</span><br></pre></td></tr></table></figure>
+
+<p>编译完成后，可执行文件同级目录下应该会生成后缀名为<code>.gcno</code>的文件，如果使用<code>cmake</code>编译系统进行编译，生成的文件可能在对应项目的<code>CMakeFiles</code>目录中；继续执行测试程序，执行完成后，会在当前目录生成后缀名为<code>.gcda</code>的文件，如果使用<code>cmake</code>，则会生成在<code>CMakeFiles</code>对应的目录中。</p>
+<p>接着使用<code>lcov</code>分析并生成对应的<code>info</code>文件</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">lcov --capture --directory project-dir --output-file coverage.info</span><br></pre></td></tr></table></figure>
+
+<p>注意将<code>project-dir</code>替换成包含<code>.gcda</code>文件的文件夹（支持递归查找）</p>
+<p>最后使用<code>genhtml</code>工具将前面生成的<code>info</code>文件转为<code>html</code>格式的网页</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">genhtml coverage.info --output-directory out</span><br></pre></td></tr></table></figure>
+
+<p>生成的静态网页会存放在<code>out</code>文件夹中，使用浏览器打开<code>index.html</code>即可可视化查看代码覆盖率</p>
+<p><img src="https://i.loli.net/2019/10/09/6UgIfKmhFuj14lk.png" alt="代码覆盖率"></p>
+<p><img src="https://i.loli.net/2019/10/09/jbSNAeZTfusnCKg.png" alt="覆盖的行"></p>
+
+  </div>
+  <div class="post-meta">
+    <span class="post-time" style="color:#646060;font-size:13px">2019-11-07</span>
+  </div>
+
+  <div class="post-footer">
+    
+
+    <a href="#top" class="top">Back to Top</a>
+  </div>
+</article>
+
+<!-- 评论插件 -->
+
+    <div id="gitalk-container"></div>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+    <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+    <script>
+    var gitalk = new Gitalk({
+        id: 'cmocka单元测试框架',
+        owner: 'tiehichi',
+        admin: ['tiehichi'],
+        repo: 'tiehichi.github.io',
+        clientID: 'bf2f550864240e94ca3f',
+        clientSecret: 'a03922278132bc805aa4a44d72e5250166095dbe',
+    })
+    gitalk.render('gitalk-container')
+    </script>
+
+
+<!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "8076240da6a9474eb806a2772561d84a"}'></script><!-- End Cloudflare Web Analytics -->
+<footer>
+  2022
+  <span class="author">
+    Tiehichi
+  </span>
+</footer>
+
+
+    </div>
+  </body>
+</html>

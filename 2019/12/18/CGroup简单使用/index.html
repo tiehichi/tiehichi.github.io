@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+  
+  <title>cgroup的简单使用 - Tiehichi&#39;s Blog</title>
+  <link rel="icon" href="https://imgur.com/pPCZVX8.png" type="image/x-icon">
+  <link href="https://fonts.googleapis.com/css?family=Bungee+Inline|Noto+Sans+SC|Ubuntu+Mono&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  
+  <meta name="keywords" content=>
+  
+  
+  
+    <link rel="alternate" href="/atom.xml " title="Tiehichi&#39;s Blog" type="application/atom+xml">
+  
+
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+
+  <body>
+    <div class="container">
+      <header class="header">
+  <div class="blog-title">
+    <a href="/" class="logo">Tiehichi&#39;s Blog</a>
+    <div class="subtitle"></div>
+  </div>
+  <nav class="navbar">
+    <ul class="menu">
+      
+        <li class="menu-item">
+          <a href="/" class="menu-item-link">Home</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/categories" class="menu-item-link">Categories</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/about" class="menu-item-link">About</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/atom.xml" class="menu-item-link">RSS</a>
+        </li>
+      
+    </ul>
+  </nav>
+</header>
+<script>
+  var link="";
+  var a = document.getElementsByTagName('img');
+  for(i=0;i<a.length;i++){
+    a[i].referrerPolicy='no-referrer';
+    link = a[i].src;
+    a[i].src = link+'?t='+Math.random();
+  }
+</script>
+
+<article class="post">
+  <div class="post-title">
+    <h1 class="article-title">cgroup的简单使用</h1>
+  </div>
+
+  <!-- 文章目录 -->
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#工作机制"><span class="toc-text">工作机制</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#内核编译选项"><span class="toc-text">内核编译选项</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#使用"><span class="toc-text">使用</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#查看子系统与层级关联情况"><span class="toc-text">查看子系统与层级关联情况</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#创建新的层级"><span class="toc-text">创建新的层级</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#查看进程属于哪些cgroup"><span class="toc-text">查看进程属于哪些cgroup</span></a></li></ol></li></ol>
+
+  <div class="post-content">
+    <p><code>cgroup（control group）</code>是由<code>linux</code>内核提供的功能，可以对一组进程使用的资源进行监控、管理和限制。</p>
+<h2 id="工作机制"><a href="#工作机制" class="headerlink" title="工作机制"></a>工作机制</h2><p><code>cgroup</code>的工作机制有四部分组成：任务（<code>task</code>），控制组（<code>cgroup</code>），子系统（<code>subsystem</code>）和层级（<code>hierarchy</code>）。</p>
+<ul>
+<li><p>任务（<code>task</code>）</p>
+<p><code>cgroup</code>中的任务实际上就是指系统中的进程。</p>
+</li>
+<li><p>控制组（<code>cgroup</code>）</p>
+<p>控制组是层级（<code>hierarchy</code>）树中的某一个节点，其中包含了一组任务和某个<code>subsystem</code>的相关控制项。</p>
+</li>
+<li><p>子系统（<code>subsystem</code>）</p>
+<p>一个子系统实际上就是一个提供了对某种资源控制功能的内核模块。<code>cgroup</code>支持多种<code>subsystem</code>，每一种<code>subsystem</code>可以针对某一种资源进行控制管理，如<code>memory</code>、<code>block IO</code>等等。</p>
+</li>
+<li><p>层级（<code>hierarchy</code>）</p>
+<p><code>hierarchy</code>是以目录树的形式组织起来的<code>control groups</code>，一个层级可以与0个或者多个<code>subsystem</code>关联，关联后即可对<code>hierarchy</code>中某一层级的<code>cgroup</code>通过<code>subsystem</code>进行资源控制。</p>
+</li>
+</ul>
+<p><img src="https://i.loli.net/2019/12/18/5aIrkzDoOd3BLiT.png" alt="cgroup.png"></p>
+<p>如上图所示，<code>cgroup</code>中各个组成部分之间的关系：</p>
+<ul>
+<li>一个子系统最多只能被添加到一个层级中</li>
+<li>一个层级可以关联多个子系统，也可以不关联子系统</li>
+<li>一个任务可以被添加到多个控制组中，但控制组所属的层级必须不同，即任务在层级中只能属于一个<code>cgroup</code></li>
+<li>系统中进程创建子进程时，子进程会被自动添加到父进程所在的<code>cgroup</code>中。</li>
+<li>创建新的<code>hierarchy</code>时，会将当前系统中所有进程添加到其<code>root cgroup</code>中。</li>
+</ul>
+<h2 id="内核编译选项"><a href="#内核编译选项" class="headerlink" title="内核编译选项"></a>内核编译选项</h2><p>前面提到<code>subsystem</code>是内核模块，开启这些内核模块需要在编译内核时打开对应的选项</p>
+<table>
+<thead>
+<tr>
+<th align="left">子系统</th>
+<th>内核选项</th>
+<th>依赖项</th>
+<th>内核版本</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>cpu</code></td>
+<td><code>CONFIG_CGROUP_SCHED</code></td>
+<td></td>
+<td><code>2.6.24</code></td>
+</tr>
+<tr>
+<td align="left"><code>cpuacct</code></td>
+<td><code>CONFIG_CGROUP_CPUACCT</code></td>
+<td></td>
+<td><code>2.6.24</code></td>
+</tr>
+<tr>
+<td align="left"><code>cpuset</code></td>
+<td><code>CONFIG_CPUSETS</code></td>
+<td></td>
+<td><code>2.6.24</code></td>
+</tr>
+<tr>
+<td align="left"><code>memory</code></td>
+<td><code>CONFIG_MEMCG</code></td>
+<td><code>RESOURCE_COUNTERS</code></td>
+<td><code>2.6.25</code></td>
+</tr>
+<tr>
+<td align="left"><code>devices</code></td>
+<td><code>CONFIG_CGROUP_DEVICE</code></td>
+<td></td>
+<td><code>2.6.26</code></td>
+</tr>
+<tr>
+<td align="left"><code>freezer</code></td>
+<td><code>CONFIG_CGROUP_FREEZER</code></td>
+<td></td>
+<td><code>2.6.28</code></td>
+</tr>
+<tr>
+<td align="left"><code>net_cls</code></td>
+<td><code>CONFIG_CGROUP_NET_CLASSID</code></td>
+<td></td>
+<td><code>2.6.29</code></td>
+</tr>
+<tr>
+<td align="left"><code>blkio</code></td>
+<td><code>CONFIG_BLK_CGROUP</code></td>
+<td></td>
+<td><code>2.6.33</code></td>
+</tr>
+<tr>
+<td align="left"><code>perf_event</code></td>
+<td><code>CONFIG_CGROUP_PERF</code></td>
+<td></td>
+<td><code>2.6.39</code></td>
+</tr>
+<tr>
+<td align="left"><code>net_prio</code></td>
+<td><code>CONFIG_CGROUP_NET_PRIO</code></td>
+<td></td>
+<td><code>3.3</code></td>
+</tr>
+<tr>
+<td align="left"><code>hugetlb</code></td>
+<td><code>CONFIG_CGROUP_HUGETLB</code></td>
+<td><code>RESOURCE_COUNTERS</code>和<code>HUGETLB_PAGE</code></td>
+<td><code>3.5</code></td>
+</tr>
+<tr>
+<td align="left"><code>pids</code></td>
+<td><code>CONFIG_CGROUP_PIDS</code></td>
+<td></td>
+<td><code>4.3</code></td>
+</tr>
+<tr>
+<td align="left"><code>rdma</code></td>
+<td><code>CONFIG_CGROUP_RDMA</code></td>
+<td></td>
+<td><code>4.11</code></td>
+</tr>
+</tbody></table>
+<h2 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h2><h3 id="查看子系统与层级关联情况"><a href="#查看子系统与层级关联情况" class="headerlink" title="查看子系统与层级关联情况"></a>查看子系统与层级关联情况</h3><p>使用<code>cat /proc/cgroups</code>可以查看当前系统中可用的<code>cgroup</code>子系统与层级之间的关系；以<code>Ubuntu 18.04</code>为例：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">~$ cat /proc/cgroups </span><br><span class="line"><span class="comment">#subsys_name	hierarchy	num_cgroups	enabled</span></span><br><span class="line">cpuset			6			3			1</span><br><span class="line">cpu				3			92			1</span><br><span class="line">cpuacct			3			92			1</span><br><span class="line">blkio			7			92			1</span><br><span class="line">memory			4			207			1</span><br><span class="line">devices			5			92			1</span><br><span class="line">freezer			2			3			1</span><br><span class="line">net_cls			9			3			1</span><br><span class="line">perf_event		11			3			1</span><br><span class="line">net_prio		9			3			1</span><br><span class="line">hugetlb			10			3			1</span><br><span class="line">pids			8			97			1</span><br><span class="line">rdma			12			1			1</span><br></pre></td></tr></table></figure>
+
+<p>结果从左到右依次为：子系统名，与子系统关联的层级ID，该层级中<code>cgroup</code>的数量，子系统是否启用。</p>
+<p>当系统中没有挂载任何层级时，结果如下</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">~$ cat /proc/cgroups</span><br><span class="line"><span class="comment">#subsys_name    hierarchy   num_cgroups enabled</span></span><br><span class="line">cpuset  		0			1       	1</span><br><span class="line">cpu     		0       	1       	1</span><br><span class="line">cpuacct 		0       	1       	1</span><br><span class="line">blkio   		0       	1       	1</span><br><span class="line">memory  		0       	1       	1</span><br><span class="line">devices 		0       	1       	1</span><br><span class="line">freezer 		0       	1       	1</span><br><span class="line">net_cls 		0       	1       	1</span><br><span class="line">perf_event      0       	1       	1</span><br><span class="line">net_prio        0       	1       	1</span><br></pre></td></tr></table></figure>
+
+<h3 id="创建新的层级"><a href="#创建新的层级" class="headerlink" title="创建新的层级"></a>创建新的层级</h3><p>使用<code>mount -t cgroup</code>可以看到系统中当前挂载的层级</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">~$ mount -t cgroup</span><br><span class="line">cgroup on /sys/fs/cgroup/systemd <span class="built_in">type</span> cgroup (rw,nosuid,nodev,noexec,relatime,xattr,name=systemd)</span><br><span class="line">cgroup on /sys/fs/cgroup/freezer <span class="built_in">type</span> cgroup (rw,nosuid,nodev,noexec,relatime,freezer)</span><br><span class="line">cgroup on /sys/fs/cgroup/cpu,cpuacct <span class="built_in">type</span> cgroup (rw,nosuid,nodev,noexec,relatime,cpu,cpuacct)</span><br><span class="line">cgroup on /sys/fs/cgroup/memory <span class="built_in">type</span> cgroup (rw,nosuid,nodev,noexec,relatime,memory)</span><br><span class="line">cgroup on /sys/fs/cgroup/devices <span class="built_in">type</span> cgroup (rw,nosuid,nodev,noexec,relatime,devices)</span><br><span class="line">cgroup on /sys/fs/cgroup/cpuset <span class="built_in">type</span> cgroup (rw,nosuid,nodev,noexec,relatime,cpuset)</span><br><span class="line">cgroup on /sys/fs/cgroup/blkio <span class="built_in">type</span> cgroup (rw,nosuid,nodev,noexec,relatime,blkio)</span><br><span class="line">cgroup on /sys/fs/cgroup/pids <span class="built_in">type</span> cgroup (rw,nosuid,nodev,noexec,relatime,pids)</span><br><span class="line">cgroup on /sys/fs/cgroup/net_cls,net_prio <span class="built_in">type</span> cgroup (rw,nosuid,nodev,noexec,relatime,net_cls,net_prio)</span><br><span class="line">cgroup on /sys/fs/cgroup/hugetlb <span class="built_in">type</span> cgroup (rw,nosuid,nodev,noexec,relatime,hugetlb)</span><br><span class="line">cgroup on /sys/fs/cgroup/perf_event <span class="built_in">type</span> cgroup (rw,nosuid,nodev,noexec,relatime,perf_event)</span><br><span class="line">cgroup on /sys/fs/cgroup/rdma <span class="built_in">type</span> cgroup (rw,nosuid,nodev,noexec,relatime,rdma)</span><br></pre></td></tr></table></figure>
+
+<p>在创建新的层级关联子系统之前，需要先确定<code>subsystem</code>是否已经关联其他层级，如果有，需要先卸载该层级。如上图结果中，如果需要卸载<code>freezer</code>子系统关联的层级，可以使用<code>umount /sys/fs/cgroup/freezer</code>卸载。</p>
+<p>创建<code>cgroup</code>层级直接在挂载<code>cgroup</code>文件系统即可，一般挂载在<code>/sys/fs/cgroup/</code>下，挂载在其他路径也可以。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">mkdir -p /run/cgroup/memory</span><br><span class="line">mount -t cgroup -o memory &lt;name&gt; /run/cgroup/memory		<span class="comment"># 创建一个与memory子系统关联的层级，&lt;name&gt;可以替换为任意字符串</span></span><br><span class="line"></span><br><span class="line">mkdir -p /run/cgroup/cpu,cpuacct</span><br><span class="line">mount -t cgroup -o cpu,cpuacct &lt;name&gt; /run/cgroup/cpu,cpuacct	<span class="comment"># 创建一个与cpu和cpuacct子系统关联的层级</span></span><br><span class="line"></span><br><span class="line">mkdir -p /run/cgroup/<span class="built_in">test</span></span><br><span class="line">mount -t cgroup -o none,name=&lt;name&gt; &lt;another name&gt; /run/cgroup/<span class="built_in">test</span>			<span class="comment"># 创建一个不与任何子系统关联的层级,此处的name=&lt;name&gt;作为参数,是该层级的标识符</span></span><br></pre></td></tr></table></figure>
+
+<p>当层级不与任何子系统关联，挂载时指定的参数<code>name=&lt;name&gt;</code>，<code>&lt;name&gt;</code>为该层级的唯一标记；当挂载另一个不关联子系统的层级时，如果参数<code>name=&lt;name&gt;</code>指定的<code>&lt;name&gt;</code>已经存在，则会再次挂载该层级，两个挂载点的内容相同。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">~$ mkdir -p /run/cgroup/nametest</span><br><span class="line">~$ mount -t cgroup -o none,name=nametest cgroup /run/cgroup/nametest</span><br><span class="line">~$ <span class="built_in">cd</span> /run/cgroup/nametest &amp;&amp; mkdir test_flag &amp;&amp; ls</span><br><span class="line">cgroup.clone_children  cgroup.procs           cgroup.sane_behavior   notify_on_release      release_agent          tasks                  test_flag</span><br><span class="line"></span><br><span class="line">~$ mkdir -p /run/cgroup/nametest2</span><br><span class="line">~$ mount -t cgroup -o none,name=nametest cgroup /run/cgroup/nametest2</span><br><span class="line">~$ <span class="built_in">cd</span> /run/cgroup/nametest2 &amp;&amp; ls</span><br><span class="line">cgroup.clone_children  cgroup.procs           cgroup.sane_behavior   notify_on_release      release_agent          tasks                  test_flag</span><br><span class="line"><span class="comment"># test_flag仍然存在，说明仅再次挂载了name=nametest的层级，没有创建新的层级</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="查看进程属于哪些cgroup"><a href="#查看进程属于哪些cgroup" class="headerlink" title="查看进程属于哪些cgroup"></a>查看进程属于哪些<code>cgroup</code></h3><p>使用<code>cat /proc/&lt;进程号&gt;/cgroup</code>查看进程属于哪些<code>cgroup</code>，例如</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">~$ cat /proc/1/cgroup</span><br><span class="line">12:rdma:/</span><br><span class="line">11:perf_event:/</span><br><span class="line">10:hugetlb:/</span><br><span class="line">9:net_cls,net_prio:/</span><br><span class="line">8:pids:/</span><br><span class="line">7:blkio:/</span><br><span class="line">6:cpuset:/</span><br><span class="line">5:devices:/</span><br><span class="line">4:memory:/</span><br><span class="line">3:cpu,cpuacct:/</span><br><span class="line">2:freezer:/</span><br><span class="line">1:name=systemd:/init.scope</span><br><span class="line">0::/init.scope</span><br></pre></td></tr></table></figure>
+
+<p>结果从左到右依次为：所属层级的ID，与层级关联的子系统，在层级的目录树中所属的<code>cgroup</code>的路径。</p>
+
+  </div>
+  <div class="post-meta">
+    <span class="post-time" style="color:#646060;font-size:13px">2019-12-18</span>
+  </div>
+
+  <div class="post-footer">
+    
+
+    <a href="#top" class="top">Back to Top</a>
+  </div>
+</article>
+
+<!-- 评论插件 -->
+
+    <div id="gitalk-container"></div>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+    <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+    <script>
+    var gitalk = new Gitalk({
+        id: 'cgroup的简单使用',
+        owner: 'tiehichi',
+        admin: ['tiehichi'],
+        repo: 'tiehichi.github.io',
+        clientID: 'bf2f550864240e94ca3f',
+        clientSecret: 'a03922278132bc805aa4a44d72e5250166095dbe',
+    })
+    gitalk.render('gitalk-container')
+    </script>
+
+
+<!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "8076240da6a9474eb806a2772561d84a"}'></script><!-- End Cloudflare Web Analytics -->
+<footer>
+  2022
+  <span class="author">
+    Tiehichi
+  </span>
+</footer>
+
+
+    </div>
+  </body>
+</html>

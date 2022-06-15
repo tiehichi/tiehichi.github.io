@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+  
+  <title>kobject分析 - Tiehichi&#39;s Blog</title>
+  <link rel="icon" href="https://imgur.com/pPCZVX8.png" type="image/x-icon">
+  <link href="https://fonts.googleapis.com/css?family=Bungee+Inline|Noto+Sans+SC|Ubuntu+Mono&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  
+  <meta name="keywords" content=>
+  
+  
+  
+    <link rel="alternate" href="/atom.xml " title="Tiehichi&#39;s Blog" type="application/atom+xml">
+  
+
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+
+  <body>
+    <div class="container">
+      <header class="header">
+  <div class="blog-title">
+    <a href="/" class="logo">Tiehichi&#39;s Blog</a>
+    <div class="subtitle"></div>
+  </div>
+  <nav class="navbar">
+    <ul class="menu">
+      
+        <li class="menu-item">
+          <a href="/" class="menu-item-link">Home</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/categories" class="menu-item-link">Categories</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/about" class="menu-item-link">About</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/atom.xml" class="menu-item-link">RSS</a>
+        </li>
+      
+    </ul>
+  </nav>
+</header>
+<script>
+  var link="";
+  var a = document.getElementsByTagName('img');
+  for(i=0;i<a.length;i++){
+    a[i].referrerPolicy='no-referrer';
+    link = a[i].src;
+    a[i].src = link+'?t='+Math.random();
+  }
+</script>
+
+<article class="post">
+  <div class="post-title">
+    <h1 class="article-title">kobject分析</h1>
+  </div>
+
+  <!-- 文章目录 -->
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#kobject结构"><span class="toc-text">kobject结构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#初始化kobject"><span class="toc-text">初始化kobject</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#增减引用计数"><span class="toc-text">增减引用计数</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#增加引用"><span class="toc-text">增加引用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#减少引用"><span class="toc-text">减少引用</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#kset结构"><span class="toc-text">kset结构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#kset组织kobject"><span class="toc-text">kset组织kobject</span></a></li></ol>
+
+  <div class="post-content">
+    <p>根据文章<a href="https://lwn.net/Articles/51437/" target="_blank" rel="noopener">The zen of kobjects</a>所述，kobject设计之初是为了管理内核对象的引用计数，但在内核的发展过程中，添加了更多的功能；对于较新版本的内核，我理解的kobject的功能主要是：</p>
+<ul>
+<li>管理内核对象引用计数</li>
+<li>为内核中的对象创建层级</li>
+<li>在sysfs中为对象创建文件夹</li>
+</ul>
+<p>每一个kobject在文件系统/sys路径下都有对应的文件夹；既然可以以目录的形式表示kobject，那么kobject一定是按照树形结构来划分层级的。</p>
+<h2 id="kobject结构"><a href="#kobject结构" class="headerlink" title="kobject结构"></a>kobject结构</h2><p>先看部分精简后的kobject的数据结构</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">kobject</span> &#123;</span></span><br><span class="line">    <span class="keyword">const</span> <span class="keyword">char</span>        *name;  <span class="comment">/* 在sysfs中创建文件夹时，文件夹的名称 */</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span>    <span class="title">entry</span>;</span>  <span class="comment">/* 链表结构，可以将kobject组织成链表 */</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">kobject</span>        *<span class="title">parent</span>;</span>  <span class="comment">/* 指向父kobject的指针 */</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">kset</span>        *<span class="title">kset</span>;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">kobj_type</span>    *<span class="title">ktype</span>;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">kernfs_node</span>    *<span class="title">sd</span>;</span> <span class="comment">/* sysfs directory entry */</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">kref</span>        <span class="title">kref</span>;</span>  <span class="comment">/* 该kobject实例的引用 */</span></span><br><span class="line"></span><br><span class="line">      <span class="comment">/* 位域，表示该对象的各种状态 */</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">int</span> state_initialized:<span class="number">1</span>;</span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">int</span> state_in_sysfs:<span class="number">1</span>;</span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">int</span> state_add_uevent_sent:<span class="number">1</span>;</span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">int</span> state_remove_uevent_sent:<span class="number">1</span>;</span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">int</span> uevent_suppress:<span class="number">1</span>;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>其中kset和ktype是比较重要的两个内容：</p>
+<ul>
+<li>kset是一个kobject组，其本身也是一个kobject</li>
+<li>ktype表示当前kobject的类型，实际上作用是表示当对象引用计数为0时，如何释放对象</li>
+</ul>
+<h2 id="初始化kobject"><a href="#初始化kobject" class="headerlink" title="初始化kobject"></a>初始化kobject</h2><p>kobject的初始化函数是kobject_init()，而kobject_init()中又调用了kobject_init_internal()函数，两个函数的实现都非常简单，精简掉错误处理部分后代码如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">kobject_init_internal</span><span class="params">(struct kobject *kobj)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (!kobj)</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    kref_init(&amp;kobj-&gt;kref);</span><br><span class="line">    INIT_LIST_HEAD(&amp;kobj-&gt;entry);</span><br><span class="line">    kobj-&gt;state_in_sysfs = <span class="number">0</span>;  <span class="comment">/* 此时还未在sysfs中创建文件夹 */</span></span><br><span class="line">    kobj-&gt;state_add_uevent_sent = <span class="number">0</span>;</span><br><span class="line">    kobj-&gt;state_remove_uevent_sent = <span class="number">0</span>;</span><br><span class="line">    kobj-&gt;state_initialized = <span class="number">1</span>;</span><br><span class="line">&#125;</span><br><span class="line"> </span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">kobject_init</span><span class="params">(struct kobject *kobj, struct kobj_type *ktype)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    kobject_init_internal(kobj);</span><br><span class="line">    kobj-&gt;ktype = ktype;</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>实际上初始化操作就只为kobject结构中ktype及各个字段进行赋值，并且对kref字段使用kref_init()初始化引用计数，继续跟一下kref的结构和kref_init()的实现。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">kref</span> &#123;</span></span><br><span class="line">	<span class="keyword">refcount_t</span> refcount;</span><br><span class="line">&#125;;</span><br><span class="line"> </span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keyword">void</span> <span class="title">kref_init</span><span class="params">(struct kref *kref)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	refcount_set(&amp;kref-&gt;refcount, <span class="number">1</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>kref_init()将引用初始化为1，所以kobject初始化之后，其引用计数为1。</p>
+<p>需要注意kobject_init()函数并未对kobject指针分配内存，所以调用kobject_init()之前，需要手动为其分配内存；但是也有另一个函数，包含了分配内存和初始化的操作：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">struct kobject *<span class="title">kobject_create</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">kobject</span> *<span class="title">kobj</span>;</span></span><br><span class="line"></span><br><span class="line">    kobj = kzalloc(<span class="keyword">sizeof</span>(*kobj), GFP_KERNEL);</span><br><span class="line">    <span class="keyword">if</span> (!kobj)</span><br><span class="line">    	<span class="keyword">return</span> <span class="literal">NULL</span>;</span><br><span class="line"></span><br><span class="line">    kobject_init(kobj, &amp;dynamic_kobj_ktype);</span><br><span class="line">    <span class="keyword">return</span> kobj;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>kobject_create()函数将kobject的ktype设置为了dynamic_kobject_ktype，这是一个全局的kobj_type，声明如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">kobj_type</span> <span class="title">dynamic_kobj_ktype</span> = &#123;</span></span><br><span class="line">    .<span class="built_in">release</span>    = dynamic_kobj_release,</span><br><span class="line">    .sysfs_ops    = &amp;kobj_sysfs_ops,</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>前面提到ktype的作用就是指示当kobject的引用归零时，如何处理kobject；而这里的kobj_type-&gt;release就是对应的处理函数，这个dynamic_kobj_release实现如下：</p>
+ <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">dynamic_kobj_release</span><span class="params">(struct kobject *kobj)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	pr_debug(<span class="string">"kobject: (%p): %s\n"</span>, kobj, __func__);</span><br><span class="line">	kfree(kobj);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>由于是使用kobject_create()默认设置的ktype，所以release时也只进行了kfree操作。</p>
+<h2 id="增减引用计数"><a href="#增减引用计数" class="headerlink" title="增减引用计数"></a>增减引用计数</h2><p>kobject对象的引用存储在其kref字段中，使用kobject_get()和kobject_put()函数可以增加和减少kobject引用计数。</p>
+<h3 id="增加引用"><a href="#增加引用" class="headerlink" title="增加引用"></a>增加引用</h3><p>kobject_get()实现比较简单：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">struct kobject *<span class="title">kobject_get</span><span class="params">(struct kobject *kobj)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (kobj) &#123;</span><br><span class="line">        <span class="keyword">if</span> (!kobj-&gt;state_initialized)</span><br><span class="line">            WARN(<span class="number">1</span>, KERN_WARNING</span><br><span class="line">            <span class="string">"kobject: '%s' (%p): is not initialized, yet kobject_get() is being called.\n"</span>, kobject_name(kobj), kobj);</span><br><span class="line">		kref_get(&amp;kobj-&gt;kref);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> kobj;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>检查kobject是否为空，然后调用了kref_get()：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keyword">void</span> <span class="title">kref_get</span><span class="params">(struct kref *kref)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	refcount_inc(&amp;kref-&gt;refcount);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>根据函数名可以确认这就是将kref-&gt;refcount记录的引用计数加1。</p>
+<h3 id="减少引用"><a href="#减少引用" class="headerlink" title="减少引用"></a>减少引用</h3><p>减少引用除了要减少kref-&gt;refcount，还需要每次检查其值是否为0，如果引用被减少到0，则应该调<code>ktype-&gt;release</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">kobject_put</span><span class="params">(struct kobject *kobj)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (kobj) &#123;</span><br><span class="line">        <span class="keyword">if</span> (!kobj-&gt;state_initialized)</span><br><span class="line">            WARN(<span class="number">1</span>, KERN_WARNING</span><br><span class="line">            <span class="string">"kobject: '%s' (%p): is not initialized, yet kobject_put() is being called.\n"</span>,</span><br><span class="line">               kobject_name(kobj), kobj);</span><br><span class="line">        kref_put(&amp;kobj-&gt;kref, kobject_release);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keyword">int</span> <span class="title">kref_put</span><span class="params">(struct kref *kref, <span class="keyword">void</span> (*<span class="built_in">release</span>)(struct kref *kref))</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (refcount_dec_and_test(&amp;kref-&gt;refcount)) &#123;</span><br><span class="line">    	<span class="built_in">release</span>(kref);</span><br><span class="line">        <span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>kobject_put()在调用kref_put()的时候，将kobject_release()传递给了kref_put()，当引用减少为0时，会调用此函数；改函数精简后源码如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">kobject_release</span><span class="params">(struct kref *kref)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">kobject</span> *<span class="title">kobj</span> = <span class="title">container_of</span>(<span class="title">kref</span>, <span class="title">struct</span> <span class="title">kobject</span>, <span class="title">kref</span>);</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> CONFIG_DEBUG_KOBJECT_RELEASE</span></span><br><span class="line">	……</span><br><span class="line"><span class="meta">#<span class="meta-keyword">else</span></span></span><br><span class="line">	kobject_cleanup(kobj);</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里通过kref获取到对应的kobject，然后调用kobject_cleanup():</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">kobject_cleanup</span><span class="params">(struct kobject *kobj)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">kobj_type</span> *<span class="title">t</span> = <span class="title">get_ktype</span>(<span class="title">kobj</span>);</span></span><br><span class="line">	……</span><br><span class="line">	<span class="keyword">if</span> (t &amp;&amp; t-&gt;<span class="built_in">release</span>) &#123;</span><br><span class="line">		pr_debug(<span class="string">"kobject: '%s' (%p): calling ktype release\n"</span>,</span><br><span class="line"> 		kobject_name(kobj), kobj);</span><br><span class="line">		t-&gt;<span class="built_in">release</span>(kobj);</span><br><span class="line">	&#125;</span><br><span class="line">	……</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在kobject_cleanup()中，调用了ktype-&gt;release，对资源进行了释放。</p>
+<h2 id="kset结构"><a href="#kset结构" class="headerlink" title="kset结构"></a>kset结构</h2><p>kset本身也是一个kobject，其结构比较简单：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">kset</span> &#123;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">list</span>;</span></span><br><span class="line">    <span class="keyword">spinlock_t</span> list_lock;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">kobject</span> <span class="title">kobj</span>;</span></span><br><span class="line">    <span class="keyword">const</span> <span class="class"><span class="keyword">struct</span> <span class="title">kset_uevent_ops</span> *<span class="title">uevent_ops</span>;</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>前面说到kset表示一个kobject组，从结构来看，kset也包含kobject结构，所以kset在sysfs中也有对应的文件夹；除了kset_uevent_ops以外，kset结构本身没有其他可以存储数据的部分，所以我认为kset的作用就是为其组内的kobject提供统一的uevent事件。</p>
+<h2 id="kset组织kobject"><a href="#kset组织kobject" class="headerlink" title="kset组织kobject"></a>kset组织kobject</h2><p>kobject结构本身包含一个指向kset的指针，但是kset却没有指向子kobject的指针，所以如果需要通过kset找到组内的kobject，只能通过kset-&gt;list遍历。</p>
+<p>先来看一下kobject_add_internal()的部分：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> <span class="title">kobject_add_internal</span><span class="params">(struct kobject *kobj)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    ……</span><br><span class="line">    <span class="comment">/* join kset if set, use it as parent if we do not already have one */</span></span><br><span class="line">    <span class="keyword">if</span> (kobj-&gt;kset) &#123;</span><br><span class="line">        <span class="keyword">if</span> (!parent)  <span class="comment">/* 如果未设置parent，会把kset作为该kobject的parent */</span></span><br><span class="line">        	parent = kobject_get(&amp;kobj-&gt;kset-&gt;kobj);  <span class="comment">/* 增加parent的引用计数 */</span></span><br><span class="line">        kobj_kset_join(kobj);</span><br><span class="line">        kobj-&gt;parent = parent;</span><br><span class="line">    &#125;</span><br><span class="line">    ……</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>该函数由kobject_add()调用，除了设置kobject的parent之外，还调用了kobject_kset_join()：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* add the kobject to its kset's list */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">kobj_kset_join</span><span class="params">(struct kobject *kobj)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (!kobj-&gt;kset)</span><br><span class="line">    	<span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">    kset_get(kobj-&gt;kset);</span><br><span class="line">    spin_lock(&amp;kobj-&gt;kset-&gt;list_lock);</span><br><span class="line">    list_add_tail(&amp;kobj-&gt;entry, &amp;kobj-&gt;kset-&gt;<span class="built_in">list</span>);</span><br><span class="line">    spin_unlock(&amp;kobj-&gt;kset-&gt;list_lock);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>该函数将kobject添加到了kset指针域的尾部，这样就可以通过kset找到组内的所有kobject，kset与组内的kobject组成了下图所示的结构：</p>
+<p><img src="https://cdn.nlark.com/yuque/0/2021/png/1679957/1619073283151-8ae6f326-5004-4b30-ba99-1f9215174d29.png" alt=""></p>
+<p>这里需要注意kobject_init()和kobject_add()都没有设置kobject-&gt;kset的值，需要手动设置kobject所属的kset。</p>
+
+  </div>
+  <div class="post-meta">
+    <span class="post-time" style="color:#646060;font-size:13px">2020-03-09</span>
+  </div>
+
+  <div class="post-footer">
+    
+
+    <a href="#top" class="top">Back to Top</a>
+  </div>
+</article>
+
+<!-- 评论插件 -->
+
+    <div id="gitalk-container"></div>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+    <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+    <script>
+    var gitalk = new Gitalk({
+        id: 'kobject分析',
+        owner: 'tiehichi',
+        admin: ['tiehichi'],
+        repo: 'tiehichi.github.io',
+        clientID: 'bf2f550864240e94ca3f',
+        clientSecret: 'a03922278132bc805aa4a44d72e5250166095dbe',
+    })
+    gitalk.render('gitalk-container')
+    </script>
+
+
+<!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "8076240da6a9474eb806a2772561d84a"}'></script><!-- End Cloudflare Web Analytics -->
+<footer>
+  2022
+  <span class="author">
+    Tiehichi
+  </span>
+</footer>
+
+
+    </div>
+  </body>
+</html>

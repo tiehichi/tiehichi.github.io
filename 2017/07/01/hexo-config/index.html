@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+  
+  <title>使用Hexo搭建博客 - Tiehichi&#39;s Blog</title>
+  <link rel="icon" href="https://imgur.com/pPCZVX8.png" type="image/x-icon">
+  <link href="https://fonts.googleapis.com/css?family=Bungee+Inline|Noto+Sans+SC|Ubuntu+Mono&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  
+  <meta name="keywords" content=>
+  
+  
+  
+    <link rel="alternate" href="/atom.xml " title="Tiehichi&#39;s Blog" type="application/atom+xml">
+  
+
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+
+  <body>
+    <div class="container">
+      <header class="header">
+  <div class="blog-title">
+    <a href="/" class="logo">Tiehichi&#39;s Blog</a>
+    <div class="subtitle"></div>
+  </div>
+  <nav class="navbar">
+    <ul class="menu">
+      
+        <li class="menu-item">
+          <a href="/" class="menu-item-link">Home</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/categories" class="menu-item-link">Categories</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/about" class="menu-item-link">About</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/atom.xml" class="menu-item-link">RSS</a>
+        </li>
+      
+    </ul>
+  </nav>
+</header>
+<script>
+  var link="";
+  var a = document.getElementsByTagName('img');
+  for(i=0;i<a.length;i++){
+    a[i].referrerPolicy='no-referrer';
+    link = a[i].src;
+    a[i].src = link+'?t='+Math.random();
+  }
+</script>
+
+<article class="post">
+  <div class="post-title">
+    <h1 class="article-title">使用Hexo搭建博客</h1>
+  </div>
+
+  <!-- 文章目录 -->
+  <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#安装nodejs"><span class="toc-text">安装nodejs</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#安装配置Hexo"><span class="toc-text">安装配置Hexo</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#管理Hexo服务"><span class="toc-text">管理Hexo服务</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#使用Nginx代理"><span class="toc-text">使用Nginx代理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#结束"><span class="toc-text">结束</span></a></li></ol>
+
+  <div class="post-content">
+    <p>今天成功的在我的VPS上使用Hexo搭建了个人博客，在此把搭建流程记录下来，作为我的第一篇博文。</p>
+<a id="more"></a>
+
+<h3 id="安装nodejs"><a href="#安装nodejs" class="headerlink" title="安装nodejs"></a>安装nodejs</h3><p>安装<code>nodejs</code>的方法可以参考<a href="https://www.digitalocean.com/community/tutorials/how-to-install-node-js-on-ubuntu-16-04#how-to-install-using-nvm" target="_blank" rel="noopener">此处</a></p>
+<h3 id="安装配置Hexo"><a href="#安装配置Hexo" class="headerlink" title="安装配置Hexo"></a>安装配置Hexo</h3><p>根据官网的提示，Hexo的安装十分简单</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">nvm install hexo-cli -g</span><br><span class="line">hexo init blog</span><br><span class="line"><span class="built_in">cd</span> blog</span><br><span class="line">npm install</span><br><span class="line">hexo server</span><br></pre></td></tr></table></figure>
+<p>这样就完成了hexo的安装和启动，关于hexo的配置以及更换主题，hexo有很详细的文档可以参考，这里就不做赘述了。</p>
+<h3 id="管理Hexo服务"><a href="#管理Hexo服务" class="headerlink" title="管理Hexo服务"></a>管理Hexo服务</h3><p>使用<code>hexo server</code>这种方式启动的服务并非 Deamon模式，查阅网上的资料，有一篇<a href="http://russellluo.com/2015/08/building-a-blog-with-hexo.html" target="_blank" rel="noopener">博客</a>提到使用supervisor工具来管理hexo服务。</p>
+<p>ubuntu上supervisor的安装十分简单：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt install supervisor</span><br></pre></td></tr></table></figure>
+<p>安装完成后，添加hexo服务的配置，在文件<code>/etc/supervisor/conf.d/blog.conf</code>中添加如下行：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">[program:blog]</span><br><span class="line">command=/home/user/.nvm/v6.11.0/bin/hexo server</span><br><span class="line">directory=/home/user/blog</span><br><span class="line">autostart=true</span><br><span class="line">autorestart=true</span><br><span class="line">startsecs=5</span><br><span class="line">stopsignal=HUP</span><br><span class="line">stopasgroup=true</span><br><span class="line">stopwaitsecs=5</span><br><span class="line">stdout_logfile_maxbytes=20MB</span><br><span class="line">stdout_logfile=/var/log/supervisor/%(program_name)s.log</span><br><span class="line">stderr_logfile_maxbytes=20MB</span><br><span class="line">stderr_logfile=/var/log/supervisor/%(program_name)s.log</span><br></pre></td></tr></table></figure>
+<p>其中<code>command</code>是hexo路径加上参数<code>server</code>，<code>directory</code>是你在<code>hexo init</code>的时候创建的hexo文件夹的路径。</p>
+<p>编写完hexo服务的配置文件后，先别急着启动supervisor，因为会出现问题。上述hexo的配置中，将日志文件存放在<code>/var/log/supervisor</code>中，但是普通用户没有对该文件夹的读写权限，所以需要以root权限启动supervisor，但是前面安装的nodejs的环境变量是在普通用户下配置的，如果以root用户启动，就需要额外为root用户配置nodejs的环境变量，我觉得挺麻烦的，就采用另一种办法，修改<code>/var/log/supervisor</code>的所属组以及拥有者</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo chown -R user:users /var/<span class="built_in">log</span>/supervisor</span><br></pre></td></tr></table></figure>
+<p>仅修改日志文件夹权限还不行，supervisor在启动的时候，需要用到UNIX本地套接字，这个文件将创建在<code>/var/run</code>目录下，而该目录普通用户也没有写权限，需要修改supervisor的配置文件，将该套接字文件的路径修改到<code>/tmp</code>目录下。</p>
+<p>编辑文件<code>/etc/supervisor/supervisord.conf</code>，找到如下两行</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">file=/var/run/supervisor.sock</span><br><span class="line">serverurl=unix:///var/run/supervisor.sock</span><br></pre></td></tr></table></figure>
+<p>可能你的系统中这两项参数的值跟我的不同，没关系，找到他们就行。然后将其修改为</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">file=/tmp/supervisor.sock</span><br><span class="line">serverurl=unix:///tmp/supervisor.sock</span><br></pre></td></tr></table></figure>
+
+<p><code>supervisor</code>服务本身使用<code>systemd</code>进行管理，所以可以使用</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">systemctl &#123; start | stop | restart | status &#125; supervisor</span><br></pre></td></tr></table></figure>
+<p>查看<code>supervisor</code>服务的运行状态，仍然可以使用<code>supervisorctl status</code>查看被<code>supervisor</code>管理的服务运行状态。</p>
+<p>如果出现<code>Permission denied</code>，记得加<code>sudo</code></p>
+<h3 id="使用Nginx代理"><a href="#使用Nginx代理" class="headerlink" title="使用Nginx代理"></a>使用Nginx代理</h3><p>启动Hexo服务后会发现，Hexo服务运行在4000端口上，这在一个博客系统中反映到url上总感觉怪怪的，但是直接使用<code>hexo server -p 80</code>这种方法，在我的系统上启动不了，没权限使用80端口，继续查阅资料，还是这篇<a href="http://russellluo.com/2015/08/building-a-blog-with-hexo.html" target="_blank" rel="noopener">博客</a>详细讲述了使用Nginx进行代理的方法。</p>
+<p>首先安装Nginx</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt install nginx</span><br></pre></td></tr></table></figure>
+<p>安装完成后，在<code>/etc/nginx/conf.d</code>目录下创建hexo服务的配置文件<code>blog.conf</code>，当然文件名随你喜欢，在文件中添加如下行：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">server &#123;</span><br><span class="line">    listen 80;</span><br><span class="line">    server_name &lt;SERVER-IP/DN&gt;;</span><br><span class="line"></span><br><span class="line">    location / &#123;</span><br><span class="line">        proxy_pass http://localhost:4000;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    access_log  /var/log/nginx/blog.access.log;</span><br><span class="line">    error_log /var/log/nginx/blog.error.log;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>将其中的<code>&lt;SERVER-IP/DN&gt;</code>替换成你的服务器的IP或者域名，然后重启Nginx</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sudo nginx -t</span><br><span class="line">sudo nginx -s reload</span><br></pre></td></tr></table></figure>
+
+<h3 id="结束"><a href="#结束" class="headerlink" title="结束"></a>结束</h3><p>以上配置全部完成后，你就可以在浏览器使用<code>http://&lt;SERVER-IP/DN&gt;</code>访问你的博客主页啦~</p>
+
+  </div>
+  <div class="post-meta">
+    <span class="post-time" style="color:#646060;font-size:13px">2017-07-01</span>
+  </div>
+
+  <div class="post-footer">
+    
+
+    <a href="#top" class="top">Back to Top</a>
+  </div>
+</article>
+
+<!-- 评论插件 -->
+
+    <div id="gitalk-container"></div>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+    <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+    <script>
+    var gitalk = new Gitalk({
+        id: '使用Hexo搭建博客',
+        owner: 'tiehichi',
+        admin: ['tiehichi'],
+        repo: 'tiehichi.github.io',
+        clientID: 'bf2f550864240e94ca3f',
+        clientSecret: 'a03922278132bc805aa4a44d72e5250166095dbe',
+    })
+    gitalk.render('gitalk-container')
+    </script>
+
+
+<!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "8076240da6a9474eb806a2772561d84a"}'></script><!-- End Cloudflare Web Analytics -->
+<footer>
+  2022
+  <span class="author">
+    Tiehichi
+  </span>
+</footer>
+
+
+    </div>
+  </body>
+</html>

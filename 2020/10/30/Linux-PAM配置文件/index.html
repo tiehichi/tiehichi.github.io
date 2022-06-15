@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+  
+  <title>Linux-PAM配置文件 - Tiehichi&#39;s Blog</title>
+  <link rel="icon" href="https://imgur.com/pPCZVX8.png" type="image/x-icon">
+  <link href="https://fonts.googleapis.com/css?family=Bungee+Inline|Noto+Sans+SC|Ubuntu+Mono&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  
+  <meta name="keywords" content=>
+  
+  
+  
+    <link rel="alternate" href="/atom.xml " title="Tiehichi&#39;s Blog" type="application/atom+xml">
+  
+
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+
+  <body>
+    <div class="container">
+      <header class="header">
+  <div class="blog-title">
+    <a href="/" class="logo">Tiehichi&#39;s Blog</a>
+    <div class="subtitle"></div>
+  </div>
+  <nav class="navbar">
+    <ul class="menu">
+      
+        <li class="menu-item">
+          <a href="/" class="menu-item-link">Home</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/categories" class="menu-item-link">Categories</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/about" class="menu-item-link">About</a>
+        </li>
+      
+        <li class="menu-item">
+          <a href="/atom.xml" class="menu-item-link">RSS</a>
+        </li>
+      
+    </ul>
+  </nav>
+</header>
+<script>
+  var link="";
+  var a = document.getElementsByTagName('img');
+  for(i=0;i<a.length;i++){
+    a[i].referrerPolicy='no-referrer';
+    link = a[i].src;
+    a[i].src = link+'?t='+Math.random();
+  }
+</script>
+
+<article class="post">
+  <div class="post-title">
+    <h1 class="article-title">Linux-PAM配置文件</h1>
+  </div>
+
+  <!-- 文章目录 -->
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#etc-pam-conf-配置文件语法"><span class="toc-text">/etc/pam.conf 配置文件语法</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#service"><span class="toc-text">service</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#type"><span class="toc-text">type</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#control"><span class="toc-text">control</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#etc-pam-d-目录中的配置文件"><span class="toc-text">/etc/pam.d 目录中的配置文件</span></a></li></ol>
+
+  <div class="post-content">
+    <p><code>PAM</code>框架意为可拔插身份认证模块，该框架实现了通过模块化的方式配置Linux平台上的身份认证框架；我们常见的需要身份认证的应用，例如<code>login</code>、<code>ssh</code>、<code>su</code>等都可以接入<code>PAM</code>框架，使其能够方便的配置身份认证方式。</p>
+<p><code>pam</code>配置文件有两个路径：<code>/etc/pam.conf</code>和<code>/etc/pam.d/</code>，先来看<code>pam.conf</code>文件。</p>
+<h2 id="etc-pam-conf-配置文件语法"><a href="#etc-pam-conf-配置文件语法" class="headerlink" title="/etc/pam.conf 配置文件语法"></a><code>/etc/pam.conf</code> 配置文件语法</h2><p>pam的配置文件以<code>stack</code>的形式来组织，每个配置文件相当于一个栈；在配置文件中，每条规则一行，每行有五个字段：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">service type control module-path module-argument</span><br></pre></td></tr></table></figure>
+
+<p>最后两个字段<code>module-path</code>和<code>module-argument</code>为需要调用的pam模块和传入模块的参数，根据模块的不同，支持的参数也不一样，这里就不过多分析；我们重点放在前三个字段上。</p>
+<h3 id="service"><a href="#service" class="headerlink" title="service"></a><code>service</code></h3><p><code>service</code>字段通常是应用程序的名称，例如<code>login</code>，<code>su</code>等；通过<code>service</code>字段可以区分当前规则用于哪个应用程序。即<code>login</code>程序进行身份验证时，只会根据service为login的规则进行。</p>
+<h3 id="type"><a href="#type" class="headerlink" title="type"></a><code>type</code></h3><p>该字段用于标识规则对应的组；pam规则共有四个组，分别为：<code>account</code>、<code>auth</code>、<code>password</code>和<code>session</code>。</p>
+<ul>
+<li><p><code>account</code></p>
+<p>这个类型的规则用于账户管理（不校验身份），例如根据时间来限制哪些用户可以登录，哪些用户不能登录。</p>
+</li>
+<li><p><code>auth</code></p>
+<p><code>auth</code>是我们最常见的规则类型，用于配置用户身份校验方式；比如我们可以将用户配置成简单的密码校验，也可以配置成多因素校验。</p>
+</li>
+<li><p><code>password</code></p>
+<p>这个模块类型用于更新用户的登录标识，如密码等。</p>
+</li>
+<li><p><code>session</code></p>
+<p><code>session</code>类型用在用户登录之前或之后进行一些操作，例如在某个用户登录之后，挂载某个目录，或者在用户登录之前清除它的<code>selinux</code>标签。</p>
+</li>
+</ul>
+<p>注意，上面四种类型，他们的功能都不是绝对的；<code>type</code>字段最重要的功能是告诉当前规则中的<code>pam</code>模块去调用某些特定类型的函数；以<code>pam_unix.so</code>模块为例，如果存在如下两条规则：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">login session required pam_unix.so open</span><br><span class="line">login auth required pam_unix.so</span><br></pre></td></tr></table></figure>
+
+<p>在<code>type</code>为<code>session</code>的规则中，PAM框架会调用<code>pam_unix.so</code>模块中的<code>pam_sm_open_session()</code>方法；而在<code>auth</code>类型的规则中，则会调用<code>pam_sm_authenticate()</code>方法。</p>
+<h3 id="control"><a href="#control" class="headerlink" title="control"></a><code>control</code></h3><p>该字段表示当PAM模块未能成功完成校验任务时的行为；该字段有两种表示方法，简单写法共有6个值，复杂写法是方括号中加上键值对表示。</p>
+<p>在简单写法中，<code>control</code>字段可以取以下值：<code>required</code>、<code>requisite</code>、<code>sufficient</code>、<code>optional</code>、<code>include</code>和<code>substack</code>。</p>
+<ul>
+<li><p><code>required</code></p>
+<p>当前模块校验失败，整个PAM校验过程最终会返回失败，但是后续模块仍然会被调用。</p>
+</li>
+<li><p><code>requisite</code></p>
+<p>当前模块校验失败将直接返回上级应用，不会继续调用后续模块。</p>
+</li>
+<li><p><code>sufficient</code></p>
+<p>如果当前模块返回success，并且此模块之前的required模块没有返回失败，PAM会直接向上层应用返回成功，不继续调用后续模块；如果当前模块返回失败，PAM会继续调用后续模块，对最终结果没有影响。</p>
+</li>
+<li><p><code>optional</code></p>
+<p>仅在当前的<code>service</code> <code>type</code>只有这一个模块时，这个模块返回成功或者失败才有意义。</p>
+</li>
+<li><p><code>include</code></p>
+<p>将指定配置文件中的所有给定type的行包含到当前配置中.</p>
+</li>
+<li><p><code>substack</code></p>
+<p>功能上与<code>include</code>相同，不同的是<code>substack</code>会创建一个子栈；子栈作为一个单独的模块执行，子栈中的<code>done</code>和<code>die</code>动作不会影响父栈，子栈中的跳转也不会跳转到父栈中；<code>reset</code>动作会初始化子栈。</p>
+</li>
+</ul>
+<p><code>control</code>字段的复杂表示语法为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[value1=action1 value2=action2 ...]</span><br></pre></td></tr></table></figure>
+
+<p>这里的<code>valueN</code>对应这条规则中，调用的<code>pam</code>模块相应函数的返回值，取值范围为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">success, open_err, symbol_err, service_err, system_err, buf_err, perm_denied, auth_err, cred_insufficient, authinfo_unavail, user_unknown, maxtries, new_authtok_reqd, acct_expired, session_err, cred_unavail, cred_expired, cred_err, no_module_data, conv_err, authtok_err, authtok_recover_err, authtok_lock_busy, authtok_disable_aging, try_again, ignore, abort, authtok_expired, module_unknown, bad_item, conv_again, incomplete, default</span><br></pre></td></tr></table></figure>
+
+<p>这些值定义在头文件<code>_pam_types.h</code>中。</p>
+<p><code>actionN</code>表示当函数返回<code>valueN</code>时，相应的动作，可以取以下值：<code>ignore</code>、<code>bad</code>、<code>die</code>、<code>ok</code>、<code>done</code>、无符号整数和<code>reset</code>。</p>
+<ul>
+<li><p><code>ignore</code></p>
+<p>模块的返回状态不会影响最终返回值。</p>
+</li>
+<li><p><code>bad</code></p>
+<p>该动作应用于返回失败的时候；如果这个模块是整个栈中第一个失败的模块，那么这个模块的返回值就是整个栈的最终返回值。</p>
+</li>
+<li><p><code>die</code></p>
+<p>功能上与b<code>ad</code>一致，但是<code>die</code>动作将终止当前栈，即不再执行后续的规则，直接返回。</p>
+</li>
+<li><p><code>ok</code></p>
+<p>如果在此动作之前，栈的返回状态为<code>PAM_SUCCESS</code>，那么此动作对应的<code>value</code>将覆盖当前栈状态；如果之前的状态为<code>failed</code>，此动作对应的<code>value</code>就不会覆盖栈状态。</p>
+</li>
+<li><p>done</p>
+<p>功能上与ok相同，但是会终止当前栈，不再执行后续的规则，直接返回。</p>
+</li>
+<li><p><code>N</code>（正整数）</p>
+<p>向下跳过N条规则，注意不能为0.</p>
+</li>
+<li><p><code>reset</code></p>
+<p>清除当前栈的所有状态，重新开始下一条规则。</p>
+</li>
+</ul>
+<p>其实简单写法就是复杂写法的一种缩写，简单写法的规则同样也可以用复杂写法表示，他们之间存在以下等式：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">required    =   [success=ok new_authtok_reqd=ok ignore=ignore default=bad]</span><br><span class="line">requisite   =   [success=ok new_authtok_reqd=ok ignore=ignore default=die]</span><br><span class="line">sufficient  =   [success=done new_authtok_reqd=done default=ignore]</span><br><span class="line">optional    =   [success=ok new_authtok_reqd=ok default=ignore]</span><br></pre></td></tr></table></figure>
+
+<h2 id="etc-pam-d-目录中的配置文件"><a href="#etc-pam-d-目录中的配置文件" class="headerlink" title="/etc/pam.d 目录中的配置文件"></a><code>/etc/pam.d</code> 目录中的配置文件</h2><p><code>pam.d</code>目录中的配置文件语法与<code>pam.conf</code>的略微不同；区别在于其只有四个字段</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">type control module-path module-argument</span><br></pre></td></tr></table></figure>
+
+<p>对应字段的取值范围和规则仍然与<code>pam.conf</code>相同；这里缺少的<code>service</code>字段体现在文件名上，即配置文件的文件名规则，与<code>service</code>相同。</p>
+
+  </div>
+  <div class="post-meta">
+    <span class="post-time" style="color:#646060;font-size:13px">2020-10-30</span>
+  </div>
+
+  <div class="post-footer">
+    
+
+    <a href="#top" class="top">Back to Top</a>
+  </div>
+</article>
+
+<!-- 评论插件 -->
+
+    <div id="gitalk-container"></div>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+    <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+    <script>
+    var gitalk = new Gitalk({
+        id: 'Linux-PAM配置文件',
+        owner: 'tiehichi',
+        admin: ['tiehichi'],
+        repo: 'tiehichi.github.io',
+        clientID: 'bf2f550864240e94ca3f',
+        clientSecret: 'a03922278132bc805aa4a44d72e5250166095dbe',
+    })
+    gitalk.render('gitalk-container')
+    </script>
+
+
+<!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "8076240da6a9474eb806a2772561d84a"}'></script><!-- End Cloudflare Web Analytics -->
+<footer>
+  2022
+  <span class="author">
+    Tiehichi
+  </span>
+</footer>
+
+
+    </div>
+  </body>
+</html>
